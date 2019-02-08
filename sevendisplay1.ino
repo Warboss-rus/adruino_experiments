@@ -1,5 +1,5 @@
 void setup() {
-  for (int i = 1; i <= 7; ++i) 
+  for (int i = 1; i <= 8; ++i) 
   {
     pinMode(i, OUTPUT);
   }
@@ -10,7 +10,7 @@ void setup() {
 }
 
 // A, B, C, D, E, F, G, DP
-const unsigned int NUMBERS[] = {
+const unsigned char NUMBERS[] = {
   B11111100,
   B01100000,
   B11011010,
@@ -22,7 +22,7 @@ const unsigned int NUMBERS[] = {
   B11111110,
   B11110110,
 };
-const unsigned int MASKS[] = {
+const unsigned char MASKS[] = {
   B10000000,
   B01000000,
   B00100000,
@@ -40,7 +40,7 @@ void showDigit(int digitIdx, unsigned char number)
     digitalWrite(firstControlPin + i, i == digitIdx ? HIGH : LOW);
   }
   const int segmentFirstPin = 1;
-  for (int i = 0; i < 7; ++i) {
+  for (int i = 0; i < 8; ++i) {
     digitalWrite(segmentFirstPin + i, !(NUMBERS[number] & MASKS[i]) ? HIGH : LOW);
   }
   delay(5);
