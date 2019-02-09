@@ -22,28 +22,19 @@ const unsigned char NUMBERS[] = {
   B11111110,
   B11110110,
 };
-const unsigned char MASKS[] = {
-  B10000000,
-  B01000000,
-  B00100000,
-  B00010000,
-  B00001000,
-  B00000100,
-  B00000010,
-  B00000001,
-};
 
 void showDigit(int digitIdx, unsigned char number)
 {
   const int firstControlPin = 10;
-  for (int i = 0; i <= 3; ++i) {
-    digitalWrite(firstControlPin + i, i == digitIdx ? HIGH : LOW);
-  }
+  digitalWrite(firstControlPin + digitIdx, HIGH);
   const int segmentFirstPin = 1;
+  unsigned char mask = B10000000;
   for (int i = 0; i < 8; ++i) {
-    digitalWrite(segmentFirstPin + i, !(NUMBERS[number] & MASKS[i]) ? HIGH : LOW);
+    digitalWrite(segmentFirstPin + i, (NUMBERS[number] & mask) ? LOW : HIGH);
+    mask >>= 1;
   }
   delay(5);
+  digitalWrite(firstControlPin + digitIdx, LOW);
 }
 
 void showNumber(unsigned int number) 
