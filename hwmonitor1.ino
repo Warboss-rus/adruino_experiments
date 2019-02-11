@@ -1,5 +1,5 @@
 #include <LiquidCrystal_I2C.h>
-#include <Wire.h>
+#include <sevendisplaylib.h>
 
 LiquidCrystal_I2C lcd(0x27,16,2);
 
@@ -17,42 +17,69 @@ struct HardwareInfoData
     unsigned int totalMb; // 2 bytes
   } mem;
 };
+HardwareInfoData info = {};
 const unsigned int HardwareInfoDataSize = 8;
 const byte startByte = 0x3C;
+bool startByteRead = false;
+bool dataRead = false;
 
 void setup() {
   lcd.init();                     
   lcd.backlight();
   lcd.print("Waiting for data");
+  for (int i = 1; i <= 8; ++i) 
+  {
+    pinMode(i, OUTPUT);
+  }
+  for (int i = 10; i <= 13; ++i)
+  {
+    pinMode(i, OUTPUT);
+  }
   Serial.begin(9600);
+}
+
+void fillUpString(char* str) 
+{
+  int len = strlen(str);
+  for (int i = len; i < 16; ++i)
+  {
+    str[i] = ' ';
+  }
+  str[16] = '\0';
 }
 
 void loop() {
   // wait for start byte
-  while ((byte(Serial.read()) != startByte))
+  if (!startByteRead && Serial.available())
   {
-    delay(1);
+    const byte data = Serial.read();
+    if (data == startByte)
+    {
+      startByteRead = true;
+    }
   }
-  // wait until we get enough data
-  while(Serial.available() < HardwareInfoDataSize)
+  
+  if (startByteRead && (Serial.available() >= HardwareInfoDataSize))
   {
-    delay(1);
-  }
-  // read data
-  HardwareInfoData info = {};
-  unsigned char* data = (unsigned char*)&info;
-  for (int i = 0; i < HardwareInfoDataSize; ++i)
-  {
-    data[i] = Serial.read();
+    // read data
+    unsigned char* data = (unsigned char*)&info;
+    for (int i = 0; i < HardwareInfoDataSize; ++i)
+    {
+      data[i] = Serial.read();
+    }
+    startByteRead = false;
+  
+    char strBuffer[17];
+    lcd.setCursor(0, 0);
+    sprintf(strBuffer, "CPU%u%%%uC%uMhz", info.cpu.load, info.cpu.temp, info.cpu.freq);
+    fillUpString(strBuffer);
+    lcd.print(strBuffer);
+    
+    lcd.setCursor(0, 1);
+    sprintf(strBuffer, "Mem%u/%uMB", info.mem.usedMb, info.mem.totalMb);
+    fillUpString(strBuffer);
+    lcd.print(strBuffer);
   }
 
-  char strBuffer[16];
-  lcd.setCursor(0, 0);
-  sprintf(strBuffer, "CPU%u%%%uC%uMhz", info.cpu.load, info.cpu.temp, info.cpu.freq);
-  lcd.clear();
-  lcd.print(strBuffer);
-  
-  lcd.setCursor(0, 1);
-  sprintf(strBuffer, "Mem%u/%uMB", info.mem.usedMb, info.mem.totalMb);
-  lcd.print(strBuffer);
+  showNumber(info.mem.usedMb);
 }
