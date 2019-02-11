@@ -50,19 +50,25 @@ const unsigned char DOT = B00000001; //.
 const unsigned char EXCLAMATION = B01100001; //!
 const unsigned char QUESTION = B11001011; //?
 const unsigned char SPACE = B0;
+int controlFirstPin = 10;
+int segmentFirstPin = 1;
+
+void initSevenSegmentDisplay(int firstControlPin, int firstSegmentPin)
+{
+	controlFirstPin = firstControlPin;
+	segmentFirstPin = firstSegmentPin;
+}
 
 void writeSymbol(int digitIdx, unsigned char symbolData)
 {
-  const int firstControlPin = 10;
-  digitalWrite(firstControlPin + digitIdx, HIGH);
-  const int segmentFirstPin = 1;
+  digitalWrite(controlFirstPin + digitIdx, HIGH);
   unsigned char mask = B10000000;
   for (int i = 0; i < 8; ++i) {
     digitalWrite(segmentFirstPin + i, (symbolData & mask) ? LOW : HIGH);
     mask >>= 1;
   }
-  delay(5);
-  digitalWrite(firstControlPin + digitIdx, LOW);
+  delay(3);
+  digitalWrite(controlFirstPin + digitIdx, LOW);
 }
 
 void showDigit(int digitIdx, unsigned char number)

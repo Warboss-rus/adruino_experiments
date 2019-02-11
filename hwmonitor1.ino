@@ -34,14 +34,11 @@ void setup() {
   lcd.init();                     
   lcd.backlight();
   lcd.print("Waiting for data");
-  for (int i = 1; i <= 8; ++i) 
+  for (int i = 2; i <= 13; ++i)
   {
     pinMode(i, OUTPUT);
   }
-  for (int i = 10; i <= 13; ++i)
-  {
-    pinMode(i, OUTPUT);
-  }
+  initSevenSegmentDisplay(10, 2);
   Serial.begin(9600);
 }
 
