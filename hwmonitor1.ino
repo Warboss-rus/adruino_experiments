@@ -16,9 +16,16 @@ struct HardwareInfoData
     unsigned int usedMb; // 2 bytes
     unsigned int totalMb; // 2 bytes
   } mem;
+  struct Gpu
+  {
+    unsigned char load;
+    unsigned char temp;
+    unsigned int freq;
+    unsigned int memFreq;
+  } gpu;
 };
 HardwareInfoData info = {};
-const unsigned int HardwareInfoDataSize = 8;
+const unsigned int HardwareInfoDataSize = 14;
 const byte startByte = 0x3C;
 bool startByteRead = false;
 bool dataRead = false;
