@@ -59,7 +59,7 @@ void initSevenSegmentDisplay(int firstControlPin, int firstSegmentPin)
 	segmentFirstPin = firstSegmentPin;
 }
 
-void writeSymbol(int digitIdx, unsigned char symbolData)
+void writeSymbol(int digitIdx, unsigned char symbolData, bool forceDot = false)
 {
   digitalWrite(controlFirstPin + digitIdx, HIGH);
   unsigned char mask = B10000000;
@@ -67,13 +67,17 @@ void writeSymbol(int digitIdx, unsigned char symbolData)
     digitalWrite(segmentFirstPin + i, (symbolData & mask) ? LOW : HIGH);
     mask >>= 1;
   }
+  if (forceDot)
+  {
+	  digitalWrite(segmentFirstPin + 7, LOW);
+  }
   delay(3);
   digitalWrite(controlFirstPin + digitIdx, LOW);
 }
 
-void showDigit(int digitIdx, unsigned char number)
+void showDigit(int digitIdx, unsigned char number, bool forceDot = false)
 {
-  writeSymbol(digitIdx, NUMBERS[number]);
+  writeSymbol(digitIdx, NUMBERS[number], forceDot);
 }
 
 unsigned char getSymbolData(char symbol)
@@ -116,6 +120,32 @@ void showNumber(unsigned int number)
   showDigit(1, number / 100 % 10);
   showDigit(2, number / 10 % 10);
   showDigit(3, number % 10);
+}
+
+void showFloat(float number)
+{
+	int intnum = (int)number;
+	if (number >= 100.0f)
+	{
+		showDigit(0, intnum / 100 % 10);
+		showDigit(1, intnum / 10 % 10);
+		showDigit(2, intnum % 10, true);
+		showDigit(3, (int)(number * 10.0f) % 10);
+	}
+	else if (number >= 10.0f)
+	{
+		showDigit(0, intnum / 10 % 10);
+		showDigit(1, intnum % 10, true);
+		showDigit(2, (int)(number * 10.0f) % 10);
+		showDigit(3, (int)(number * 100.0f) % 10);
+	}
+	else 
+	{
+		showDigit(0, intnum % 10, true);
+		showDigit(1, (int)(number * 10.0f) % 10);
+		showDigit(2, (int)(number * 100.0f) % 10);
+		showDigit(3, (int)(number * 1000.0f) % 10);
+	}
 }
 
 void showString(const char* str, int len, int offset)

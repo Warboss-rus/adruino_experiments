@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO.Ports;
 using System.Runtime.InteropServices;
 using OpenHardwareMonitor.Hardware;
@@ -43,11 +44,11 @@ namespace HardwareMonitorServer
 
         private struct Sensors
         {
-            public ISensor cpuTemp;
+            public List<ISensor> cpuTemp;
             public ISensor cpuLoad;
             public ISensor cpuFreq;
             public ISensor gpuLoad;
-            public ISensor gpuTemp;
+            public List<ISensor> gpuTemp;
             public ISensor gpuFreq;
             public ISensor gpuMemFreq;
         }
@@ -60,6 +61,8 @@ namespace HardwareMonitorServer
             myComputer.Open();
 
             Sensors sensors = new Sensors();
+            sensors.cpuTemp = new List<ISensor>();
+            sensors.gpuTemp = new List<ISensor>();
             foreach (var hardwareItem in myComputer.Hardware)
             {
                 switch (hardwareItem.HardwareType)
@@ -81,11 +84,16 @@ namespace HardwareMonitorServer
             HardwareInfo info = new HardwareInfo();
             while (true)
             {
+                foreach (var hardwareItem in myComputer.Hardware)
+                {
+                    hardwareItem.Update();
+                }
+
                 info.cpuLoad = Convert.ToByte(GetSensorData(sensors.cpuLoad));
-                info.cpuTemp = Convert.ToByte(GetSensorData(sensors.cpuTemp));
+                info.cpuTemp = Convert.ToByte(GetMaxSensorValue(sensors.cpuTemp));
                 info.cpuFreq = Convert.ToUInt16(GetSensorData(sensors.cpuFreq));
                 info.gpuLoad = Convert.ToByte(GetSensorData(sensors.gpuLoad));
-                info.gpuTemp = Convert.ToByte(GetSensorData(sensors.gpuTemp));
+                info.gpuTemp = Convert.ToByte(GetMaxSensorValue(sensors.gpuTemp));
                 info.gpuFreq = Convert.ToUInt16(GetSensorData(sensors.gpuFreq));
                 info.gpuMemFreq = Convert.ToUInt16(GetSensorData(sensors.gpuMemFreq));
                 GetRAMValues(ref info);
@@ -105,13 +113,26 @@ namespace HardwareMonitorServer
         {
             if (sensor != null)
             {
-                sensor.Hardware.Update();
                 if (sensor.Value.HasValue)
                 {
                     return sensor.Value.Value;
                 }
             }
             return 0;
+        }
+
+        static float GetMaxSensorValue(List<ISensor> sensors)
+        {
+            float result = 0;
+            foreach (ISensor sensor in sensors)
+            {
+                float value = GetSensorData(sensor);
+                if (value > result)
+                {
+                    result = value;
+                }
+            }
+            return result;
         }
 
         static void GetCpuSensors(IHardware hardwareItem, ref Sensors sensors)
@@ -123,10 +144,13 @@ namespace HardwareMonitorServer
                     switch (sensor.SensorType)
                     {
                         case SensorType.Temperature:
-                            sensors.cpuTemp = sensor;
+                            sensors.cpuTemp.Add(sensor);
                             break;
                         case SensorType.Load:
-                            sensors.cpuLoad = sensor;
+                            if (sensor.Name.Contains("Total") || sensors.cpuLoad == null)
+                            {
+                                sensors.cpuLoad = sensor;
+                            }
                             break;
                         case SensorType.Clock:
                             if (sensor.Index != 0)
@@ -148,7 +172,7 @@ namespace HardwareMonitorServer
                     switch (sensor.SensorType)
                     {
                         case SensorType.Temperature:
-                            sensors.gpuTemp = sensor;
+                            sensors.gpuTemp.Add(sensor);
                             break;
                         case SensorType.Load:
                             sensors.gpuLoad = sensor;
