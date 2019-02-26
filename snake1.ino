@@ -2,7 +2,7 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define INITIAL_STEP_DURATION 125
-#define SNAKE_GROW_PER_APPLE 3
+#define SNAKE_GROW_PER_APPLE 5
 #define JOYSTICK_X_PIN A0
 #define JOYSTICK_Y_PIN A1
 #define JOYSTICK_DEADZONE_MIN 256
@@ -93,9 +93,17 @@ void gameOver()
   // TODO: display game over message
 }
 
+void endOfLevel()
+{
+    stepDuration = stepDuration * 4 / 5; //increase snake speed
+    clearScreen();
+    resetSnake();
+    spawnApple();
+}
+
 inline unsigned char nextIndex(unsigned char i)
 {
-  return (i == MAX_LENGTH) ? 0 : (i + 1);
+  return (i + 1 == MAX_LENGTH) ? 0 : (i + 1);
 }
 
 void spawnApple() 
@@ -121,6 +129,9 @@ void resetSnake()
 {
   startIdx = 0;
   endIdx = 3;
+  snakeDirection = NONE;
+  prevSnakeDirection = RIGHT;
+  snakeGrow = 0;
   const int centerx = SCREEN_WIDTH / 2;
   const int centery = SCREEN_HEIGHT / 2;
   snakeBody[0].x = centerx - 1;
@@ -136,7 +147,7 @@ void resetSnake()
 
 void nextStep() 
 {
-  Point headPos = snakeBody[endIdx == 0 ? MAX_LENGTH : endIdx - 1];
+  Point headPos = snakeBody[endIdx == 0 ? MAX_LENGTH - 1 : endIdx - 1];
   prevSnakeDirection = snakeDirection;
   switch(snakeDirection)
   {
@@ -166,7 +177,11 @@ void nextStep()
   }
   snakeBody[endIdx] = headPos;
   endIdx = nextIndex(endIdx);
-  if (headPos.x == applePos.x && headPos.y == applePos.y)
+  if (endIdx == startIdx)
+  {
+    endOfLevel();
+  }
+  else if (headPos.x == applePos.x && headPos.y == applePos.y)
   {
     //spawn new apple, do not move tail, do not switch head since this pixel is already on because of an apple
     spawnApple();
@@ -192,7 +207,7 @@ void nextStep()
 void setup() 
 {
   // put your setup code here, to run once:
-  randomSeed(analogRead(0));
+  randomSeed(analogRead(2));
   pinMode(JOYSTICK_X_PIN, INPUT);
   pinMode(JOYSTICK_Y_PIN, INPUT);
   Serial.begin(9600);
