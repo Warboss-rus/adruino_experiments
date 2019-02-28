@@ -7,6 +7,13 @@
 #define JOYSTICK_Y_PIN A1
 #define JOYSTICK_DEADZONE_MIN 256
 #define JOYSTICK_DEADZONE_MAX 768
+//#define ENABLE_SERIAL_DISPLAY
+#define ENABLE_PHYSICAL_DISPLAY
+
+#ifdef ENABLE_PHYSICAL_DISPLAY
+#include <U8g2lib.h>
+U8G2_ST7920_128X64_F_SW_SPI u8g2(0, A2, A3, A4);
+#endif
 
 struct Point
 {
@@ -39,19 +46,30 @@ const byte actionClear = 2;
 
 void clearScreen()
 {
+#ifdef ENABLE_SERIAL_DISPLAY
   Serial.write(startMarker);
   Serial.write(actionClear);
   Serial.write(SCREEN_WIDTH);
   Serial.write(SCREEN_HEIGHT);
+#endif
+#ifdef ENABLE_PHYSICAL_DISPLAY
+  u8g2.clearBuffer();
+#endif
 }
 
 void setPixel(unsigned char x, unsigned char y, bool lit)
 {
+#ifdef ENABLE_SERIAL_DISPLAY
   Serial.write(startMarker);
   Serial.write(actionSetPixel);
   Serial.write(x);
   Serial.write(y);
   Serial.write(lit ? 1 : 0);
+#endif
+#ifdef ENABLE_PHYSICAL_DISPLAY
+  u8g2.setDrawColor(lit ? 1 : 0);
+  u8g2.drawPixel(x, y);
+#endif
 }
 
 void updateDirection()
@@ -210,7 +228,12 @@ void setup()
   randomSeed(analogRead(2));
   pinMode(JOYSTICK_X_PIN, INPUT);
   pinMode(JOYSTICK_Y_PIN, INPUT);
+#ifdef ENABLE_SERIAL_DISPLAY
   Serial.begin(9600);
+#endif
+#ifdef ENABLE_PHYSICAL_DISPLAY
+  u8g2.begin();
+#endif
   clearScreen();
   resetSnake();
   spawnApple();
@@ -229,5 +252,8 @@ void loop()
   {
     lastStepTime = timePassed;
     nextStep();
+#ifdef ENABLE_PHYSICAL_DISPLAY
+    u8g2.sendBuffer();
+#endif
   }
 }
