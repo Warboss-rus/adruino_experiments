@@ -16,8 +16,10 @@ namespace COMDisplay
 
         private const byte actionSetPixel = 1; // byte x, byte y, byte set
         private const byte actionClear = 2; // byte width, byte height
+        private const byte actionDrawSprite = 3; // byte x, byte y, byte[8] spriteData
         private int SetPixelActionSize = 3;
         private int ClearActionSize = 2;
+        private int DrawSpriteActionSize = 10;
 
         public Form1(string[] args)
         {
@@ -46,7 +48,7 @@ namespace COMDisplay
             if (startMarkerReceived && action == 0 && port.BytesToRead > 0)
             {
                 action = Convert.ToByte(port.ReadByte());
-                if (action > actionClear)
+                if (action > actionDrawSprite)
                 {
                     action = 0;
                     startMarkerReceived = false;
@@ -66,6 +68,19 @@ namespace COMDisplay
                 byte x = Convert.ToByte(port.ReadByte());
                 byte y = Convert.ToByte(port.ReadByte());
                 Clear(x, y);
+                action = 0;
+                startMarkerReceived = false;
+            }
+            if (startMarkerReceived && action == actionDrawSprite && port.BytesToRead >= DrawSpriteActionSize)
+            {
+                byte x = Convert.ToByte(port.ReadByte());
+                byte y = Convert.ToByte(port.ReadByte());
+                byte[] spriteData = new byte[8];
+                for (int i = 0; i < 8; ++i)
+                {
+                    spriteData[i] = Convert.ToByte(port.ReadByte());
+                }
+                DrawSprite(x, y, spriteData);
                 action = 0;
                 startMarkerReceived = false;
             }
@@ -91,6 +106,22 @@ namespace COMDisplay
             {
                 g.Clear(Color.White);
             }
+        }
+
+        private void DrawSprite(byte x, byte y, byte[] spriteData)
+        {
+            Invoke(new Action(() =>
+            {
+                for (int i = 0; i < 8; ++i)
+                {
+                    for (int j = 0; j < 8; ++j)
+                    {
+                        bool lit = (spriteData[j] & 1 << (7 - i)) != 0;
+                        img.SetPixel(x + i, y + j, lit ? Color.Black : Color.White);
+                    }
+                }
+                Invalidate();
+            }));
         }
 
         private void Form1_Paint(object sender, PaintEventArgs e)
