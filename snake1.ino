@@ -1,4 +1,4 @@
-#define MAX_LENGTH 255
+#define MAX_LENGTH 250
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define INITIAL_STEP_DURATION 125
@@ -12,7 +12,7 @@
 
 #ifdef ENABLE_PHYSICAL_DISPLAY
 #include <U8g2lib.h>
-U8G2_ST7920_128X64_F_SW_SPI u8g2(0, A2, A3, A4);
+U8G2_ST7920_128X64_F_HW_SPI u8g2(U8G2_R0, 10);
 #endif
 
 struct Point
@@ -81,27 +81,26 @@ void updateDirection()
   const int deltaY = abs(y - joystickNeutral);
   if (deltaX > deltaY)
   {
-    if (x <= JOYSTICK_DEADZONE_MIN && prevSnakeDirection != RIGHT)
+    if ((x <= JOYSTICK_DEADZONE_MIN) && (prevSnakeDirection != RIGHT))
     {
       snakeDirection = LEFT;
     }
-    else if (x >= JOYSTICK_DEADZONE_MAX && prevSnakeDirection != LEFT)
+    else if ((x >= JOYSTICK_DEADZONE_MAX) && (prevSnakeDirection != LEFT))
     {
       snakeDirection = RIGHT;
     }
   }
   else
   {
-     if (y <= JOYSTICK_DEADZONE_MIN && prevSnakeDirection != DOWN)
+     if ((y <= JOYSTICK_DEADZONE_MIN) && (prevSnakeDirection != DOWN))
     {
       snakeDirection = UP;
     }
-    else if (y >= JOYSTICK_DEADZONE_MAX && prevSnakeDirection != UP)
+    else if ((y >= JOYSTICK_DEADZONE_MAX) && (prevSnakeDirection != UP))
     {
       snakeDirection = DOWN;
     }
   }
-  // TODO: do not allow 180 turns
 }
 
 void gameOver()
@@ -166,7 +165,6 @@ void resetSnake()
 void nextStep() 
 {
   Point headPos = snakeBody[endIdx == 0 ? MAX_LENGTH - 1 : endIdx - 1];
-  prevSnakeDirection = snakeDirection;
   switch(snakeDirection)
   {
     case UP:
@@ -184,6 +182,7 @@ void nextStep()
     default:
       return;
   }
+  prevSnakeDirection = snakeDirection;
   // check if we hit our body
   for (unsigned char i = startIdx; i != endIdx; i = nextIndex(i))
   {
