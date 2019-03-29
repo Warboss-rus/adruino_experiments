@@ -1,10 +1,12 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define SPRITE_SIZE 8
+#define BULLET_SIZE 2
 #define TILE_ROWS 16 // SCREEN_WIDTH / SPRITE_SIZE
 #define TILE_COLUMNS 8 // SCREEN_HEIGHT / SPRITE_SIZE
 #define TANK_STEP_DURATION 125
 #define BULLET_STEP_DURATION 50
+#define RELOAD_FRAMES 40
 #define JOYSTICK_X_PIN A0
 #define JOYSTICK_Y_PIN A1
 #define JOYSTICK_BUTTON_PIN A2
@@ -26,12 +28,14 @@ struct Tank
   byte x;
   byte y;
   Direction dir;
+  byte reload;
 };
 struct Bullet
 {
   byte x;
   byte y;
   Direction dir;
+  bool active;
 };
 
 const byte TANK_SPRITE[] = {
@@ -127,7 +131,8 @@ const byte LEVEL1[] PROGMEM = {
 unsigned long lastStepTime = 0;
 unsigned long lastBulletsTime = 0;
 unsigned long lastTempUpdateTime = 0;
-Tank tankPos = {32, 56, DIR_UP};
+Tank tankPos = {32, 56, DIR_UP, 0};
+Bullet bulletPos = {0, 0, DIR_UP, false};
 
 #include <U8g2lib.h>
 U8G2_ST7920_128X64_F_HW_SPI u8g2(U8G2_R0, 10);
@@ -166,7 +171,7 @@ const byte* getSprite(byte type)
 
 const byte* getTankSprite(Direction dir)
 {
-  switch(dir)
+  switch (dir)
   {
     case DIR_UP:
       return TANK_SPRITE;
@@ -199,7 +204,7 @@ Direction getCurrentDirection()
   }
   else
   {
-     if (y <= JOYSTICK_DEADZONE_MIN)
+    if (y <= JOYSTICK_DEADZONE_MIN)
     {
       return DIR_UP;
     }
@@ -211,43 +216,43 @@ Direction getCurrentDirection()
   return DIR_NONE;
 }
 
-void updateTanks()
+void updateTankPos(Tank& tankPos)
 {
   Tank prevPos = tankPos;
-  switch(getCurrentDirection())
+  switch (getCurrentDirection())
   {
     case DIR_LEFT:
-    {
-      tankPos.dir = DIR_LEFT;
-      if (tankPos.x > 0)
       {
-        --tankPos.x;
-      }
-    }break;
+        tankPos.dir = DIR_LEFT;
+        if (tankPos.x > 0)
+        {
+          --tankPos.x;
+        }
+      } break;
     case DIR_UP:
-    {
-      tankPos.dir = DIR_UP;
-      if (tankPos.y > 0)
       {
-        --tankPos.y;
-      }
-    }break;
+        tankPos.dir = DIR_UP;
+        if (tankPos.y > 0)
+        {
+          --tankPos.y;
+        }
+      } break;
     case DIR_RIGHT:
-    {
-      tankPos.dir = DIR_RIGHT;
-      if (tankPos.x + SPRITE_SIZE < SCREEN_WIDTH)
       {
-        ++tankPos.x;
-      }
-    }break;
+        tankPos.dir = DIR_RIGHT;
+        if (tankPos.x + SPRITE_SIZE < SCREEN_WIDTH)
+        {
+          ++tankPos.x;
+        }
+      } break;
     case DIR_DOWN:
-    {
-      tankPos.dir = DIR_DOWN;
-      if (tankPos.y + SPRITE_SIZE < SCREEN_HEIGHT)
       {
-        ++tankPos.y;
-      }
-    }break;
+        tankPos.dir = DIR_DOWN;
+        if (tankPos.y + SPRITE_SIZE < SCREEN_HEIGHT)
+        {
+          ++tankPos.y;
+        }
+      } break;
     default:
       return;
   }
@@ -268,8 +273,77 @@ void updateTanks()
   }
 }
 
+void updateTankFire(Tank& tankPos)
+{
+  if (tankPos.reload > 0)
+  {
+    --tankPos.reload;
+  }
+  if ((tankPos.reload == 0) && (digitalRead(JOYSTICK_BUTTON_PIN) == LOW) && (!bulletPos.active)) {
+    tankPos.reload = RELOAD_FRAMES;
+    bulletPos.x = tankPos.x + SPRITE_SIZE / 2;
+    bulletPos.y = tankPos.y + SPRITE_SIZE / 2;
+    bulletPos.dir = tankPos.dir;
+    bulletPos.active = true;
+    drawBullet(bulletPos.x, bulletPos.y);
+  }
+}
+
+void drawBullet(byte x, byte y)
+{
+  u8g2.setColorIndex(1);
+  u8g2.drawBox(x - BULLET_SIZE / 2, y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE);
+}
+
+bool updateBullet(Bullet& bullet)
+{
+  if ((bullet.dir == DIR_LEFT && bullet.x == 0) || (bullet.dir == DIR_RIGHT && bullet.x == SCREEN_WIDTH - 1) || (bullet.dir == DIR_UP && bullet.y == 0) || (bullet.dir == DIR_DOWN && bullet.y == SCREEN_HEIGHT - 1))
+  {
+    bullet.active = false;
+    return false;
+  }
+  switch (bullet.dir)
+  {
+    case DIR_LEFT:
+      --bullet.x;
+      break;
+    case DIR_RIGHT:
+      ++bullet.x;
+      break;
+    case DIR_UP:
+      --bullet.y;
+      break;
+    case DIR_DOWN:
+      ++bullet.y;
+      break;
+  }
+  int idx = bullet.x / SPRITE_SIZE + (bullet.y / SPRITE_SIZE * TILE_ROWS);
+  if (pgm_read_byte_near(LEVEL1 + idx) != NONE)
+  {
+    bullet.active = false;
+    return false;
+  }
+  return true;
+}
+
+bool updateBullets()
+{
+  if (bulletPos.active)
+  {
+    // remove bullet at previous pos
+    u8g2.setColorIndex(0);
+    u8g2.drawBox(bulletPos.x - BULLET_SIZE / 2, bulletPos.y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE);
+    if (updateBullet(bulletPos))
+    {
+      drawBullet(bulletPos.x, bulletPos.y);
+    }
+    return true;
+  }
+  return false;
+}
+
 #include <OneWire.h>
-OneWire ds(A0);
+OneWire ds(A5);
 unsigned int updateTemp()
 {
   byte data[2];
@@ -281,12 +355,12 @@ unsigned int updateTemp()
   {
     lastTempUpdateTime = millis();
     ds.reset();
-    ds.write(0xCC); 
+    ds.write(0xCC);
     ds.write(0xBE);
-   
+
     data[0] = ds.read();
     data[1] = ds.read();
-   
+
     float temperature =  ((data[1] << 8) | data[0]) * 0.0625;
     unsigned short intTemp = temperature * 100;
     Serial.write((byte)intTemp);
@@ -296,6 +370,8 @@ unsigned int updateTemp()
 
 void setup() {
   // put your setup code here, to run once:
+  pinMode(JOYSTICK_BUTTON_PIN, INPUT);
+  digitalWrite(JOYSTICK_BUTTON_PIN, HIGH);
   Serial.begin(115200);
   u8g2.begin();
   clearScreen();
@@ -321,8 +397,17 @@ void loop() {
   if (timePassed >= lastStepTime + TANK_STEP_DURATION)
   {
     lastStepTime = timePassed;
-    updateTanks();
+    updateTankPos(tankPos);
+    updateTankFire(tankPos);
     u8g2.sendBuffer();
+  }
+  if (timePassed >= lastBulletsTime + BULLET_STEP_DURATION)
+  {
+    lastBulletsTime = timePassed;
+    if (updateBullets())
+    {
+      u8g2.sendBuffer();
+    }
   }
   updateTemp();
 }
