@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+#include <ArduinoOTA.h>
 #define SERVER_PORT 80
 #define HISTORY_SIZE 100
 
@@ -44,42 +45,39 @@ String stateToJSON(const MeteoState& state)
   return result;
 }
 
-void printHTMLScript(WiFiClient& client)
-{
-  client.println("<script>");
-  client.println("function drawGraph(history) {");
-  client.println("  const canvas = document.getElementById(\"historyGraph\");");
-  client.println("  canvas.hidden = false;");
-  client.println("  const ctx = canvas.getContext(\"2d\");");
-  client.println("  ctx.strokeStyle = \"grey\";");
-  client.println("  ctx.beginPath();");
-  client.println("  ctx.moveTo(0, 200);");
-  client.println("  ctx.lineTo(1000, 200);");
-  client.println("  ctx.stroke();");
-  client.println("  ctx.fillText(\"50°C\", 0, 10);");
-  client.println("  ctx.fillText(\"0°C\", 0, 200);");
-  client.println("  ctx.fillText(\" - 50°C\", 0, 397);");
-  client.println("  ctx.strokeStyle = \"red\";");
-  client.println("  ctx.beginPath();");
-  client.println("  if (history.length > 0) {");
-  client.println("    ctx.moveTo(0, 200 - history[0] * 4);");
-  client.println("  }");
-  client.println("  for (var i = 1; i < history.length; i++) {");
-  client.println("    ctx.lineTo(1000 * i / (history.length - 1), 200 - history[i].temp * 4);");
-  client.println("  }");
-  client.println("  ctx.stroke();");
-  client.println("}");
-  client.println("var xobj = new XMLHttpRequest();");
-  client.println("xobj.open('GET', '/history', true);");
-  client.println("xobj.onreadystatechange = function () {");
-  client.println("  if (xobj.readyState == 4 && xobj.status == \"200\") {");
-  client.println("    historyData = JSON.parse(xobj.responseText);");
-  client.println("    drawGraph(historyData.records);");
-  client.println("  }");
-  client.println("};");
-  client.println("xobj.send(null);");
-  client.println("</script>");
-}
+static const char HTML_SCRIPT[] PROGMEM = "<script>"
+                           "function drawGraph(history) {"
+                           "  const canvas = document.getElementById(\"historyGraph\");"
+                           "  canvas.hidden = false;"
+                           "  const ctx = canvas.getContext(\"2d\");"
+                           "  ctx.strokeStyle = \"grey\";"
+                           "  ctx.beginPath();"
+                           "  ctx.moveTo(0, 200);"
+                           "  ctx.lineTo(1000, 200);"
+                           "  ctx.stroke();"
+                           "  ctx.fillText(\"50°C\", 0, 10);"
+                           "  ctx.fillText(\"0°C\", 0, 200);"
+                           "  ctx.fillText(\" - 50°C\", 0, 397);"
+                           "  ctx.strokeStyle = \"red\";"
+                           "  ctx.beginPath();"
+                           "  if (history.length > 0) {"
+                           "    ctx.moveTo(0, 200 - history[0] * 4);"
+                           "  }"
+                           "  for (var i = 1; i < history.length; i++) {"
+                           "    ctx.lineTo(1000 * i / (history.length - 1), 200 - history[i].temp * 4);"
+                           "  }"
+                           "  ctx.stroke();"
+                           "}"
+                           "var xobj = new XMLHttpRequest();"
+                           "xobj.open('GET', '/history', true);"
+                           "xobj.onreadystatechange = function () {"
+                           "  if (xobj.readyState == 4 && xobj.status == \"200\") {"
+                           "    historyData = JSON.parse(xobj.responseText);"
+                           "    drawGraph(historyData.records);"
+                           "  }"
+                           "};"
+                           "xobj.send(null);"
+                           "</script>";
 
 void printHTML(WiFiClient& client)
 {
@@ -91,7 +89,7 @@ void printHTML(WiFiClient& client)
   client.println("<!DOCTYPE html><html>");
   client.println("<link rel=\"icon\" href=\"data:,\">");
 
-  printHTMLScript(client);
+  client.println(FPSTR(HTML_SCRIPT));
 
   client.println("<body><h1>ESP8266 Temp monitor</h1>");
   client.print("<p>Current temperature: ");
@@ -163,6 +161,42 @@ void processWiFiClient(WiFiClient& client)
   client.stop();
 }
 
+void setupOTA()
+{
+   ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_SPIFFS
+      type = "filesystem";
+    }
+
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("Auth Failed");
+    } else if (error == OTA_BEGIN_ERROR) {
+      Serial.println("Begin Failed");
+    } else if (error == OTA_CONNECT_ERROR) {
+      Serial.println("Connect Failed");
+    } else if (error == OTA_RECEIVE_ERROR) {
+      Serial.println("Receive Failed");
+    } else if (error == OTA_END_ERROR) {
+      Serial.println("End Failed");
+    }
+  });
+  ArduinoOTA.begin();
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -181,6 +215,8 @@ void setup()
   Serial.print("Connected, IP address: ");
   Serial.println(WiFi.localIP());
 
+  setupOTA();
+
   server.begin();
 }
 
@@ -195,4 +231,6 @@ void loop()
   {
     processWiFiClient(client);
   }
+
+  ArduinoOTA.handle();
 }
