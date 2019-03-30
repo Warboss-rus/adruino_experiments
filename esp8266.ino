@@ -41,6 +41,7 @@ String stateToJSON(const MeteoState& state)
   result += ",\"pres\":";
   result += String(state.pressure);
   result += ",\"hum\":";
+  result += String(state.humidity, 2);
   result += "}";
   return result;
 }
@@ -55,9 +56,9 @@ static const char HTML_SCRIPT[] PROGMEM = "<script>"
                            "  ctx.moveTo(0, 200);"
                            "  ctx.lineTo(1000, 200);"
                            "  ctx.stroke();"
-                           "  ctx.fillText(\"50°C\", 0, 10);"
-                           "  ctx.fillText(\"0°C\", 0, 200);"
-                           "  ctx.fillText(\" - 50°C\", 0, 397);"
+                           "  ctx.fillText(\"50\\xB0C\", 0, 10);"
+                           "  ctx.fillText(\"0\\xB0C\", 0, 200);"
+                           "  ctx.fillText(\" - 50\\xB0C\", 0, 397);"
                            "  ctx.strokeStyle = \"red\";"
                            "  ctx.beginPath();"
                            "  if (history.length > 0) {"
@@ -94,7 +95,7 @@ void printHTML(WiFiClient& client)
   client.println("<body><h1>ESP8266 Temp monitor</h1>");
   client.print("<p>Current temperature: ");
   client.print(currentState.temperature);
-  client.println("°C<br>");
+  client.println("&degC<br>");
   client.print("Current pressure: ");
   client.print(currentState.pressure);
   client.println(" hPa<br>");
@@ -108,21 +109,25 @@ void printHTML(WiFiClient& client)
 
 void printJSON(WiFiClient& client)
 {
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-type:application/json");
-  client.println("Connection: close");
-  client.println();
-
-  client.println("{\"records\"=[");
+  String historyData = "{\"records\":[";
   for (unsigned int i = historyStart; i != historyEnd; i = (i + 1) % HISTORY_SIZE)
   {
     if (i != historyStart)
     {
-      client.print(",");
+      historyData += ',';
     }
-    client.print(stateToJSON(currentState));
+    historyData += stateToJSON(history[i]);
   }
-  client.println("]}");
+  historyData += "]}";
+  
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-type:application/json");
+  client.print("Content-Length:");
+  client.println(historyData.length());
+  client.println("Connection: close");
+  client.println();
+
+  client.println(historyData);
   client.println();
 }
 
@@ -149,6 +154,7 @@ void processWiFiClient(WiFiClient& client)
           {
             printHTML(client);
           }
+          break;
         }
         else
         {
