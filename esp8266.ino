@@ -8,9 +8,10 @@
 struct MeteoState
 {
   float temperature;
-  unsigned int pressure;
   float humidity;
+  unsigned short pressure;
 };
+#define METEO_STATE_DATA_SIZE 10
 
 const char* ssid = "********";
 const char* password = "********";
@@ -23,11 +24,11 @@ unsigned int historyEnd = 0;
 
 void readDataFromSerial()
 {
-  byte data[2];
-  data[0] = Serial.read();
-  data[1] = Serial.read();
-  currentState.temperature = ((data[1] << 8) | data[0]);
-  currentState.temperature /= 100;
+  byte* data = (byte*)&currentState;
+  for (unsigned int i = 0; i < METEO_STATE_DATA_SIZE; ++i)
+  {
+    data[i] = Serial.read();
+  }
   history[historyEnd] = currentState;
   historyEnd = (historyEnd + 1) % HISTORY_SIZE;
   if (historyStart == historyEnd)
@@ -49,38 +50,50 @@ String stateToJSON(const MeteoState& state)
 }
 
 static const char HTML_SCRIPT[] PROGMEM = "<script>"
-                           "function drawGraph(history) {"
-                           "  const canvas = document.getElementById(\"historyGraph\");"
-                           "  canvas.hidden = false;"
-                           "  const ctx = canvas.getContext(\"2d\");"
-                           "  ctx.strokeStyle = \"grey\";"
-                           "  ctx.beginPath();"
-                           "  ctx.moveTo(0, 200);"
-                           "  ctx.lineTo(1000, 200);"
-                           "  ctx.stroke();"
-                           "  ctx.fillText(\"50\\xB0C\", 0, 10);"
-                           "  ctx.fillText(\"0\\xB0C\", 0, 200);"
-                           "  ctx.fillText(\" - 50\\xB0C\", 0, 397);"
-                           "  ctx.strokeStyle = \"red\";"
-                           "  ctx.beginPath();"
-                           "  if (history.length > 0) {"
-                           "    ctx.moveTo(0, 200 - history[0] * 4);"
-                           "  }"
-                           "  for (var i = 1; i < history.length; i++) {"
-                           "    ctx.lineTo(1000 * i / (history.length - 1), 200 - history[i].temp * 4);"
-                           "  }"
-                           "  ctx.stroke();"
-                           "}"
-                           "var xobj = new XMLHttpRequest();"
-                           "xobj.open('GET', '/history', true);"
-                           "xobj.onreadystatechange = function () {"
-                           "  if (xobj.readyState == 4 && xobj.status == \"200\") {"
-                           "    historyData = JSON.parse(xobj.responseText);"
-                           "    drawGraph(historyData.records);"
-                           "  }"
-                           "};"
-                           "xobj.send(null);"
-                           "</script>";
+    "function drawGraph(history) {"
+    "  const canvas = document.getElementById(\"historyGraph\");"
+    "  canvas.hidden = false;"
+    "  const ctx = canvas.getContext(\"2d\");"
+    "  ctx.strokeStyle = \"grey\";"
+    "  ctx.beginPath();"
+    "  ctx.moveTo(0, 200);"
+    "  ctx.lineTo(1000, 200);"
+    "  ctx.stroke();"
+    "  ctx.fillText(\"50\\xB0C\", 0, 10);"
+    "  ctx.fillText(\"0\\xB0C\", 0, 200);"
+    "  ctx.fillText(\" -50\\xB0C\", 0, 397);"
+    "  ctx.fillText(\"2000 hPa\", 955, 10);"
+    "  ctx.fillText(\"1000 hPa\", 955, 200);"
+    "  ctx.fillText(\"0 hPa\", 970, 397);"
+    "  ctx.strokeStyle = \"red\";"
+    "  ctx.beginPath();"
+    "  if (history.length > 0) {"
+    "    ctx.moveTo(0, 200 - history[0].temp * 4);"
+    "  }"
+    "  for (var i = 1; i < history.length; i++) {"
+    "    ctx.lineTo(1000 * i / (history.length - 1), 200 - history[i].temp * 4);"
+    "  }"
+    "  ctx.stroke();"
+    "  ctx.strokeStyle = \"blue\";"
+    "  ctx.beginPath();"
+    "  if (history.length > 0) {"
+    "    ctx.moveTo(0, 400 - history[0].pres / 5);"
+    "  }"
+    "  for (var i = 1; i < history.length; i++) {"
+    "    ctx.lineTo(1000 * i / (history.length - 1), 400 - history[i].pres / 5);"
+    "  }"
+    "  ctx.stroke();"
+    "}"
+    "var xobj = new XMLHttpRequest();"
+    "xobj.open('GET', '/history', true);"
+    "xobj.onreadystatechange = function () {"
+    "  if (xobj.readyState == 4 && xobj.status == \"200\") {"
+    "    historyData = JSON.parse(xobj.responseText);"
+    "    drawGraph(historyData.records);"
+    "  }"
+    "};"
+    "xobj.send(null);"
+    "</script>";
 
 void printHTML()
 {
@@ -196,7 +209,7 @@ void setup()
 
 void loop()
 {
-  while (Serial.available() >= 2)
+  while (Serial.available() >= METEO_STATE_DATA_SIZE)
   {
     readDataFromSerial();
   }

@@ -344,6 +344,13 @@ bool updateBullets()
 
 #include <OneWire.h>
 OneWire ds(A5);
+struct MeteoState
+{
+  float temperature;
+  float humidity;
+  unsigned short pressure;
+};
+#define METEO_STATE_DATA_SIZE 10
 unsigned int updateTemp()
 {
   byte data[2];
@@ -361,10 +368,13 @@ unsigned int updateTemp()
     data[0] = ds.read();
     data[1] = ds.read();
 
-    float temperature =  ((data[1] << 8) | data[0]) * 0.0625;
-    unsigned short intTemp = temperature * 100;
-    Serial.write((byte)intTemp);
-    Serial.write((byte)(intTemp >> 8));
+    MeteoState state = {0.0f, 0.0f, 0};
+    state.temperature = ((data[1] << 8) | data[0]) * 0.0625;
+    byte* data = (byte*)&state;
+    for (unsigned int i = 0; i < METEO_STATE_DATA_SIZE; ++i)
+    {
+      Serial.write(data[i]);
+    }
   }
 }
 
