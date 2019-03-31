@@ -1,4 +1,6 @@
 #include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 #define SERVER_PORT 80
 #define HISTORY_SIZE 100
@@ -13,7 +15,7 @@ struct MeteoState
 const char* ssid = "********";
 const char* password = "********";
 
-WiFiServer server(SERVER_PORT);
+ESP8266WebServer server(SERVER_PORT);
 MeteoState currentState = {0.0f, 0, 0.0f};
 MeteoState history[HISTORY_SIZE] = {};
 unsigned int historyStart = 0;
@@ -80,34 +82,22 @@ static const char HTML_SCRIPT[] PROGMEM = "<script>"
                            "xobj.send(null);"
                            "</script>";
 
-void printHTML(WiFiClient& client)
+void printHTML()
 {
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-type:text/html");
-  client.println("Connection: close");
-  client.println();
+  String htmlContent = "<!DOCTYPE html><html><link rel=\"icon\" href=\"data:,\">";
+  htmlContent += FPSTR(HTML_SCRIPT);
+  htmlContent += "<body><h1>ESP8266 Temp monitor</h1><p>Current temperature: ";
+  htmlContent += String(currentState.temperature, 2);
+  htmlContent += "&degC<br>Current pressure: ";
+  htmlContent += String(currentState.pressure);
+  htmlContent += " hPa<br>Current humidity: ";
+  htmlContent += String(currentState.humidity, 2);
+  htmlContent += "%</p><br><canvas id=\"historyGraph\" width=\"1000px\" height=\"400px\" style=\"border: 1px solid #000000;\" hidden></canvas></body></html>";
 
-  client.println("<!DOCTYPE html><html>");
-  client.println("<link rel=\"icon\" href=\"data:,\">");
-
-  client.println(FPSTR(HTML_SCRIPT));
-
-  client.println("<body><h1>ESP8266 Temp monitor</h1>");
-  client.print("<p>Current temperature: ");
-  client.print(currentState.temperature);
-  client.println("&degC<br>");
-  client.print("Current pressure: ");
-  client.print(currentState.pressure);
-  client.println(" hPa<br>");
-  client.print("Current humidity: ");
-  client.print(currentState.humidity);
-  client.println("%</p><br>");
-  client.println("<canvas id=\"historyGraph\" width=\"1000px\" height=\"400px\" style=\"border: 1px solid #000000;\" hidden></canvas>");
-  client.println("</body></html>");
-  client.println();
+  server.send(200, "text/html", htmlContent);
 }
 
-void printJSON(WiFiClient& client)
+void printJSON()
 {
   String historyData = "{\"records\":[";
   for (unsigned int i = historyStart; i != historyEnd; i = (i + 1) % HISTORY_SIZE)
@@ -119,57 +109,28 @@ void printJSON(WiFiClient& client)
     historyData += stateToJSON(history[i]);
   }
   historyData += "]}";
-  
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-type:application/json");
-  client.print("Content-Length:");
-  client.println(historyData.length());
-  client.println("Connection: close");
-  client.println();
 
-  client.println(historyData);
-  client.println();
+  server.send(200, "application/json", historyData);
 }
 
-void processWiFiClient(WiFiClient& client)
-{
-  String header;
-  String currentLine;
-  while (client.connected())
-  {
-    if (client.available())
-    {
-      char c = client.read();
-      Serial.write(c);
-      header += c;
-      if (c == '\n')
-      {
-        if (currentLine.length() == 0)
-        {
-          if (header.indexOf("GET /history") >= 0)
-          {
-            printJSON(client);
-          }
-          else
-          {
-            printHTML(client);
-          }
-          break;
-        }
-        else
-        {
-          currentLine = "";
-        }
-      }
-    }
+void printNotFound() {
+  String message = "URL Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
   }
-  delay(1);
-  client.stop();
+  server.send(404, "text/plain", message);
 }
 
 void setupOTA()
 {
-   ArduinoOTA.onStart([]() {
+  ArduinoOTA.onStart([]() {
     String type;
     if (ArduinoOTA.getCommand() == U_FLASH) {
       type = "sketch";
@@ -221,8 +182,15 @@ void setup()
   Serial.print("Connected, IP address: ");
   Serial.println(WiFi.localIP());
 
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
   setupOTA();
 
+  server.on("/", printHTML);
+  server.on("/history", printJSON);
+  server.onNotFound(printNotFound);
   server.begin();
 }
 
@@ -233,10 +201,9 @@ void loop()
     readDataFromSerial();
   }
 
-  if (WiFiClient client = server.available())
-  {
-    processWiFiClient(client);
-  }
+  server.handleClient();
+
+  MDNS.update();
 
   ArduinoOTA.handle();
 }
