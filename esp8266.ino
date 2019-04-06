@@ -9,9 +9,9 @@ struct MeteoState
 {
   float temperature;
   float humidity;
-  unsigned short pressure;
+  unsigned int pressure;
 };
-#define METEO_STATE_DATA_SIZE 10
+#define METEO_STATE_DATA_SIZE 12
 
 const char* ssid = "********";
 const char* password = "********";
@@ -77,10 +77,10 @@ static const char HTML_SCRIPT[] PROGMEM = "<script>"
     "  ctx.strokeStyle = \"blue\";"
     "  ctx.beginPath();"
     "  if (history.length > 0) {"
-    "    ctx.moveTo(0, 400 - history[0].pres / 5);"
+    "    ctx.moveTo(0, 400 - history[0].pres / 500);"
     "  }"
     "  for (var i = 1; i < history.length; i++) {"
-    "    ctx.lineTo(1000 * i / (history.length - 1), 400 - history[i].pres / 5);"
+    "    ctx.lineTo(1000 * i / (history.length - 1), 400 - history[i].pres / 500);"
     "  }"
     "  ctx.stroke();"
     "}"
@@ -97,13 +97,16 @@ static const char HTML_SCRIPT[] PROGMEM = "<script>"
 
 void printHTML()
 {
+  float pressureMmHg = currentState.pressure / 133.3224f;
   String htmlContent = "<!DOCTYPE html><html><link rel=\"icon\" href=\"data:,\">";
   htmlContent += FPSTR(HTML_SCRIPT);
   htmlContent += "<body><h1>ESP8266 Temp monitor</h1><p>Current temperature: ";
   htmlContent += String(currentState.temperature, 2);
   htmlContent += "&degC<br>Current pressure: ";
+  htmlContent += String(pressureMmHg);
+  htmlContent += " mmHg (";
   htmlContent += String(currentState.pressure);
-  htmlContent += " hPa<br>Current humidity: ";
+  htmlContent += " Pa)<br>Current humidity: ";
   htmlContent += String(currentState.humidity, 2);
   htmlContent += "%</p><br><canvas id=\"historyGraph\" width=\"1000px\" height=\"400px\" style=\"border: 1px solid #000000;\" hidden></canvas></body></html>";
 
