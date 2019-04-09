@@ -1,0 +1,2 @@
+void setupMeteo();
+void updateMeteo();
