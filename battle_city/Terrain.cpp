@@ -2,7 +2,7 @@
 #include "Terrain.h"
 #include "Common.h"
 
-const byte LEVEL1[] = {
+byte LEVEL1[] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   1, 0, 1, 0, 1, 0, 4, 5, 4, 0, 1, 0, 1, 0, 1, 0,
   1, 0, 1, 0, 1, 0, 5, 5, 5, 0, 1, 0, 1, 0, 1, 0,
@@ -28,4 +28,9 @@ const byte LEVEL1[] = {
 TileType Terrain::GetTile(byte x, byte y)
 {
   return (TileType)LEVEL1[x + y * TILE_ROWS];
+}
+
+void Terrain::ClearTile(byte x, byte y)
+{
+  LEVEL1[x + y * TILE_ROWS] = NONE;
 }

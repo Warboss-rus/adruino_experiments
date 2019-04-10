@@ -1,5 +1,5 @@
-#define TANK_STEP_DURATION 125
-#define BULLET_STEP_DURATION 50
+#define TANK_STEP_DURATION 100
+#define BULLET_STEP_DURATION 40
 #define RELOAD_FRAMES 40
 #define JOYSTICK_X_PIN PA0
 #define JOYSTICK_Y_PIN PA1
@@ -25,6 +25,7 @@ struct Bullet
   byte x;
   byte y;
   Direction dir;
+  TankIndex owner;
   bool active;
 };
 
@@ -32,7 +33,7 @@ unsigned long lastStepTime = 0;
 unsigned long lastBulletsTime = 0;
 Tank tankPos = {40, 152, DIR_UP, 0};
 Tank tankPos2 = {72, 152, DIR_UP, 0};
-Bullet bulletPos = {0, 0, DIR_UP, false};
+Bullet bulletPos = {0, 0, DIR_UP, TANK_ENEMY, false};
 
 void drawTerrain(byte type, byte x, byte y)
 {
@@ -41,7 +42,7 @@ void drawTerrain(byte type, byte x, byte y)
     case BRICK:
       return Graphics::DrawBricks(x, y);
     case HQ:
-      return Graphics::DrawBricks(x, y);
+      return Graphics::DrawHQ(x, y);
     case ARMOUR:
       return Graphics::DrawArmour(x, y);
     case TREE:
@@ -145,7 +146,7 @@ void updateTankFire(Tank& tankPos)
   {
     --tankPos.reload;
   }
-  if ((tankPos.reload == 0) && (digitalRead(JOYSTICK_BUTTON_PIN) == LOW) && (!bulletPos.active)) 
+  if ((tankPos.reload == 0) && (!digitalRead(JOYSTICK_BUTTON_PIN)) && (!bulletPos.active)) 
   {
     tankPos.reload = RELOAD_FRAMES;
     bulletPos.x = tankPos.x + SPRITE_SIZE / 2;
@@ -178,8 +179,16 @@ bool updateBullet(Bullet& bullet)
       ++bullet.y;
       break;
   }
-  if (Terrain::GetTile(bullet.x / SPRITE_SIZE, bullet.y / SPRITE_SIZE) != NONE)
+  TileType tile = Terrain::GetTile(bullet.x / SPRITE_SIZE, bullet.y / SPRITE_SIZE);
+  if (tile == ARMOUR)
   {
+    bullet.active = false;
+    return false;
+  }
+  if (tile == BRICK)
+  {
+    Terrain::ClearTile(bullet.x / SPRITE_SIZE, bullet.y / SPRITE_SIZE);
+    Graphics::DrawExplosion(bullet.x / SPRITE_SIZE * SPRITE_SIZE, bullet.y / SPRITE_SIZE * SPRITE_SIZE, 0);
     bullet.active = false;
     return false;
   }
@@ -216,8 +225,7 @@ void drawLevel()
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(JOYSTICK_BUTTON_PIN, INPUT);
-  digitalWrite(JOYSTICK_BUTTON_PIN, HIGH);
+  pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
   Graphics::InitScreen();
   drawLevel();
   Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, TANK_P1);

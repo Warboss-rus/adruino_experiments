@@ -14,4 +14,5 @@ class Terrain
 {
   public:
     static TileType GetTile(byte x, byte y);
+    static void ClearTile(byte x, byte y);
 };

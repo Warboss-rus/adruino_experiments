@@ -95,6 +95,36 @@ const byte TREE_SPRITE[] PROGMEM = {
   B11111011,
   B01101110,
 };
+const byte EXPLOSION_FRONT[] PROGMEM = {
+  B11000001,
+  B10010010,
+  B01111100,
+  B11100111,
+  B00110100,
+  B00011100,
+  B01001010,
+  B10001001,
+};
+const byte EXPLOSION_BACK[] PROGMEM = {
+  B00010010,
+  B00100100,
+  B10000001,
+  B00000000,
+  B01000001,
+  B00100010,
+  B00010100,
+  B01000000,
+};
+const byte EXPLISION_ACCENT[] PROGMEM = {
+  B00000000,
+  B01000000,
+  B00000010,
+  B00010000,
+  B00001000,
+  B00000000,
+  B00000000,
+  B00000000,
+};
 
 const uint16_t BRICK_FRONT_COLOR = 0x9A40; //0x9c4a00
 const uint16_t BRICK_BACK_COLOR = 0x630C; //0x636363
@@ -109,6 +139,9 @@ const uint16_t WATER_FRONT_COLOR = 0x421F; //0x4242ff
 const uint16_t WATER_BACK_COLOR = 0xB77D; //0xb5efef
 const uint16_t TREE_FRONT_COLOR = 0x8EA0; //0x8cd600
 const uint16_t TREE_BACK_COLOR = 0x0281; //0x005208
+const uint16_t EXPLOSION_FRONT_COLOR = 0xFFFF; //0xFFFFFF
+const uint16_t EXPLOSION_BACK_COLOR = 0x587A; //0x590dd4
+const uint16_t EXPLOSION_ACCENT_COLOR = 0xB184; //0xb53121
 const uint16_t TANK_COLORS[] = {ENEMY_TANK_COLOR, P1_TANK_COLOR, P2_TANK_COLOR};
 
 const byte* getTankSprite(Direction dir)
@@ -187,7 +220,14 @@ void Graphics::DrawHQ(byte x, byte y)
   drawTransparentSprite(x, y, HQ_SPRITE, HQ_COLOR);
 }
 
-void  Graphics::DrawTank(byte x, byte y, Direction dir, TankIndex index)
+void Graphics::DrawTank(byte x, byte y, Direction dir, TankIndex index)
 {
   drawTransparentSprite(x, y, getTankSprite(dir), TANK_COLORS[index]);
+}
+
+void Graphics::DrawExplosion(byte x, byte y, byte frame)
+{
+  drawSprite(x, y, EXPLOSION_BACK, EXPLOSION_BACK_COLOR, ST7735_BLACK);
+  drawTransparentSprite(x,y, EXPLOSION_FRONT, EXPLOSION_FRONT_COLOR);
+  drawTransparentSprite(x,y, EXPLISION_ACCENT, EXPLOSION_ACCENT_COLOR);
 }

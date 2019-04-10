@@ -22,4 +22,5 @@ class Graphics
     static void DrawHQ(byte x, byte y);
     static void DrawBullet(byte x, byte y);
     static void DrawTank(byte x, byte y, Direction dir, TankIndex index);
+    static void DrawExplosion(byte x, byte y, byte frame);
 };
