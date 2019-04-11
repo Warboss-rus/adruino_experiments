@@ -14,3 +14,10 @@ enum Direction
   DIR_LEFT,
   DIR_RIGHT,
 };
+
+enum TankIndex
+{
+  TANK_ENEMY,
+  TANK_P1,
+  TANK_P2
+};

@@ -1,13 +1,6 @@
 #pragma once
 #include "Common.h"
 
-enum TankIndex
-{
-  TANK_ENEMY,
-  TANK_P1,
-  TANK_P2
-};
-
 class Graphics
 {
   public:

@@ -1,6 +1,9 @@
 #define TANK_STEP_DURATION 100
 #define BULLET_STEP_DURATION 40
 #define RELOAD_FRAMES 40
+#define MAX_BULLETS 10
+#define BULLET_STATE_FLYING 255
+#define EXPLOSION_FRAMES 5
 #define JOYSTICK_X_PIN PA0
 #define JOYSTICK_Y_PIN PA1
 #define JOYSTICK_BUTTON_PIN PA2
@@ -19,21 +22,26 @@ struct Tank
   byte y;
   Direction dir;
   byte reload;
+  TankIndex type;
+  byte lives;
 };
+
 struct Bullet
 {
   byte x;
   byte y;
   Direction dir;
   TankIndex owner;
-  bool active;
+  byte state; // 0 - disabled, 1-EXPLOSION_FRAMES - explosion, 255 - flying
 };
 
 unsigned long lastStepTime = 0;
 unsigned long lastBulletsTime = 0;
-Tank tankPos = {40, 152, DIR_UP, 0};
-Tank tankPos2 = {72, 152, DIR_UP, 0};
-Bullet bulletPos = {0, 0, DIR_UP, TANK_ENEMY, false};
+Tank tankPos = {40, 152, DIR_UP, 0, TANK_P1, 1};
+Tank tankPos2 = {72, 152, DIR_UP, 0, TANK_P2, 1};
+Tank tankEnemy1 = {0, 0, DIR_RIGHT, 0, TANK_ENEMY, 1};
+Tank tankEnemy2 = {120, 0, DIR_DOWN, 0, TANK_ENEMY, 1};
+Bullet bullets[MAX_BULLETS] = {};
 
 void drawTerrain(byte type, byte x, byte y)
 {
@@ -146,22 +154,45 @@ void updateTankFire(Tank& tankPos)
   {
     --tankPos.reload;
   }
-  if ((tankPos.reload == 0) && (!digitalRead(JOYSTICK_BUTTON_PIN)) && (!bulletPos.active)) 
+  if ((tankPos.reload == 0) && (!digitalRead(JOYSTICK_BUTTON_PIN)))
   {
     tankPos.reload = RELOAD_FRAMES;
-    bulletPos.x = tankPos.x + SPRITE_SIZE / 2;
-    bulletPos.y = tankPos.y + SPRITE_SIZE / 2;
-    bulletPos.dir = tankPos.dir;
-    bulletPos.active = true;
-    Graphics::DrawBullet(bulletPos.x, bulletPos.y);
+    for (size_t i = 0; i < MAX_BULLETS; ++i)
+    {
+      Bullet& bulletPos = bullets[i];
+      if (!bulletPos.state)
+      {
+        bulletPos.x = tankPos.x + SPRITE_SIZE / 2;
+        bulletPos.y = tankPos.y + SPRITE_SIZE / 2;
+        bulletPos.dir = tankPos.dir;
+        bulletPos.owner = TANK_P1;
+        bulletPos.state = BULLET_STATE_FLYING;
+        Graphics::DrawBullet(bulletPos.x, bulletPos.y);
+        return;
+      }
+    }
   }
+}
+
+bool collideWithTank(Bullet& bullet, Tank& tank)
+{
+  if (bullet.owner != tank.type && bullet.x >= tank.x && bullet.x < tank.x + SPRITE_SIZE && bullet.y >= tank.y && bullet.y < tank.y + SPRITE_SIZE && tank.lives > 0)
+  {
+    --tank.lives;
+    bullet.x = tank.x;
+    bullet.y = tank.y;
+    bullet.state = EXPLOSION_FRAMES;
+    Graphics::DrawExplosion(bullet.x, bullet.y, bullet.state);
+    return true;
+  }
+  return false;
 }
 
 bool updateBullet(Bullet& bullet)
 {
   if ((bullet.dir == DIR_LEFT && bullet.x == 0) || (bullet.dir == DIR_RIGHT && bullet.x == SCREEN_WIDTH - 1) || (bullet.dir == DIR_UP && bullet.y == 0) || (bullet.dir == DIR_DOWN && bullet.y == SCREEN_HEIGHT - 1))
   {
-    bullet.active = false;
+    bullet.state = 0;
     return false;
   }
   switch (bullet.dir)
@@ -182,14 +213,20 @@ bool updateBullet(Bullet& bullet)
   TileType tile = Terrain::GetTile(bullet.x / SPRITE_SIZE, bullet.y / SPRITE_SIZE);
   if (tile == ARMOUR)
   {
-    bullet.active = false;
+    bullet.state = false;
     return false;
   }
   if (tile == BRICK)
   {
     Terrain::ClearTile(bullet.x / SPRITE_SIZE, bullet.y / SPRITE_SIZE);
-    Graphics::DrawExplosion(bullet.x / SPRITE_SIZE * SPRITE_SIZE, bullet.y / SPRITE_SIZE * SPRITE_SIZE, 0);
-    bullet.active = false;
+    bullet.x = bullet.x / SPRITE_SIZE * SPRITE_SIZE;
+    bullet.y = bullet.y / SPRITE_SIZE * SPRITE_SIZE;
+    bullet.state = EXPLOSION_FRAMES;
+    Graphics::DrawExplosion(bullet.x, bullet.y, bullet.state);
+    return false;
+  }
+  if (collideWithTank(bullet, tankPos) || collideWithTank(bullet, tankPos2) || collideWithTank(bullet, tankEnemy1) || collideWithTank(bullet, tankEnemy2))
+  {
     return false;
   }
   return true;
@@ -197,13 +234,24 @@ bool updateBullet(Bullet& bullet)
 
 void updateBullets()
 {
-  if (bulletPos.active)
+  for (size_t i = 0; i < MAX_BULLETS; ++i)
   {
-    // remove bullet at previous pos
-    Graphics::ClearBullet(bulletPos.x, bulletPos.y);
-    if (updateBullet(bulletPos))
+    Bullet& bullet = bullets[i];
+    if (bullet.state == BULLET_STATE_FLYING)
     {
-      Graphics::DrawBullet(bulletPos.x, bulletPos.y);
+      // remove bullet at previous pos
+      Graphics::ClearBullet(bullet.x, bullet.y);
+      if (updateBullet(bullet))
+      {
+        Graphics::DrawBullet(bullet.x, bullet.y);
+      }
+    }
+    else if (bullet.state != 0)
+    {
+      if (--bullet.state == 0)
+      {
+        Graphics::ClearSprite(bullet.x, bullet.y);
+      }
     }
   }
 }
@@ -228,10 +276,10 @@ void setup() {
   pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
   Graphics::InitScreen();
   drawLevel();
-  Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, TANK_P1);
-  Graphics::DrawTank(tankPos2.x, tankPos2.y, tankPos2.dir, TANK_P2);
-  Graphics::DrawTank(0, 0, DIR_RIGHT, TANK_ENEMY);
-  Graphics::DrawTank(120, 0, DIR_DOWN, TANK_ENEMY);
+  Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, tankPos.type);
+  Graphics::DrawTank(tankPos2.x, tankPos2.y, tankPos2.dir, tankPos2.type);
+  Graphics::DrawTank(tankEnemy1.x, tankEnemy1.y, tankEnemy1.dir, tankEnemy1.type);
+  Graphics::DrawTank(tankEnemy2.x, tankEnemy2.y, tankEnemy2.dir, tankEnemy2.type);
 
   setupMeteo();
 }
