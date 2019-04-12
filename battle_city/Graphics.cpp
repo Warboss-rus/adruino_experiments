@@ -143,6 +143,7 @@ const uint16_t EXPLOSION_FRONT_COLOR = 0xFFFF; //0xFFFFFF
 const uint16_t EXPLOSION_BACK_COLOR = 0x587A; //0x590dd4
 const uint16_t EXPLOSION_ACCENT_COLOR = 0xB184; //0xb53121
 const uint16_t TANK_COLORS[] = {ENEMY_TANK_COLOR, P1_TANK_COLOR, P2_TANK_COLOR};
+const uint16_t TEXT_COLOR = 0xB184; //0xb53121
 
 const byte* getTankSprite(Direction dir)
 {
@@ -230,4 +231,11 @@ void Graphics::DrawExplosion(byte x, byte y, byte frame)
   drawSprite(x, y, EXPLOSION_BACK, EXPLOSION_BACK_COLOR, ST7735_BLACK);
   drawTransparentSprite(x,y, EXPLOSION_FRONT, EXPLOSION_FRONT_COLOR);
   drawTransparentSprite(x,y, EXPLISION_ACCENT, EXPLOSION_ACCENT_COLOR);
+}
+
+void Graphics::DrawText(byte x, byte y, const char* text)
+{
+  tft.setCursor(x, y);
+  tft.setTextColor(TEXT_COLOR);
+  tft.print(text);
 }

@@ -42,6 +42,7 @@ Tank tankPos2 = {72, 152, DIR_UP, 0, TANK_P2, 1};
 Tank tankEnemy1 = {0, 0, DIR_RIGHT, 0, TANK_ENEMY, 1};
 Tank tankEnemy2 = {120, 0, DIR_DOWN, 0, TANK_ENEMY, 1};
 Bullet bullets[MAX_BULLETS] = {};
+bool gameOver = false;
 
 void drawTerrain(byte type, byte x, byte y)
 {
@@ -216,13 +217,19 @@ bool updateBullet(Bullet& bullet)
     bullet.state = false;
     return false;
   }
-  if (tile == BRICK)
+  if (tile == BRICK || tile == HQ)
   {
     Terrain::ClearTile(bullet.x / SPRITE_SIZE, bullet.y / SPRITE_SIZE);
     bullet.x = bullet.x / SPRITE_SIZE * SPRITE_SIZE;
     bullet.y = bullet.y / SPRITE_SIZE * SPRITE_SIZE;
     bullet.state = EXPLOSION_FRAMES;
     Graphics::DrawExplosion(bullet.x, bullet.y, bullet.state);
+    if (tile == HQ)
+    {
+      gameOver = true;
+      Graphics::DrawText(54, 72, "Game");
+      Graphics::DrawText(54, 80, "Over");
+    }
     return false;
   }
   if (collideWithTank(bullet, tankPos) || collideWithTank(bullet, tankPos2) || collideWithTank(bullet, tankEnemy1) || collideWithTank(bullet, tankEnemy2))
@@ -286,17 +293,20 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  const unsigned long timePassed = millis();
-  if (timePassed >= lastStepTime + TANK_STEP_DURATION)
+  if (!gameOver)
   {
-    lastStepTime = timePassed;
-    updateTankPos(tankPos);
-    updateTankFire(tankPos);
-  }
-  if (timePassed >= lastBulletsTime + BULLET_STEP_DURATION)
-  {
-    lastBulletsTime = timePassed;
-    updateBullets();
+    const unsigned long timePassed = millis();
+    if (timePassed >= lastStepTime + TANK_STEP_DURATION)
+    {
+      lastStepTime = timePassed;
+      updateTankPos(tankPos);
+      updateTankFire(tankPos);
+    }
+    if (timePassed >= lastBulletsTime + BULLET_STEP_DURATION)
+    {
+      lastBulletsTime = timePassed;
+      updateBullets();
+    }
   }
   updateMeteo();
 }
