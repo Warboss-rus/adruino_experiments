@@ -7,6 +7,9 @@
 #define JOYSTICK_X_PIN PA0
 #define JOYSTICK_Y_PIN PA1
 #define JOYSTICK_BUTTON_PIN PA2
+#define JOYSTICK2_X_PIN PB0
+#define JOYSTICK2_Y_PIN PB1
+#define JOYSTICK2_BUTTON_PIN PB10
 #define JOYSTICK_DEADZONE_MIN 1024
 #define JOYSTICK_DEADZONE_MAX 3072
 #define JOYSTICK_NEUTRAL 2048
@@ -61,10 +64,10 @@ void drawTerrain(byte type, byte x, byte y)
   };
 }
 
-Direction getCurrentDirection()
+Direction getCurrentDirection(uint32_t xPin, uint32_t yPin)
 {
-  const int x = analogRead(JOYSTICK_X_PIN);
-  const int y = analogRead(JOYSTICK_Y_PIN);
+  const int x = analogRead(xPin);
+  const int y = analogRead(yPin);
   const int deltaX = abs(x - JOYSTICK_NEUTRAL);
   const int deltaY = abs(y - JOYSTICK_NEUTRAL);
   if (deltaX > deltaY)
@@ -92,10 +95,10 @@ Direction getCurrentDirection()
   return DIR_NONE;
 }
 
-void updateTankPos(Tank& tankPos)
+void updateTankPos(Tank& tankPos, uint32_t xPin, uint32_t yPin)
 {
   Tank prevPos = tankPos;
-  switch (getCurrentDirection())
+  switch (getCurrentDirection(xPin, yPin))
   {
     case DIR_LEFT:
       {
@@ -145,17 +148,17 @@ void updateTankPos(Tank& tankPos)
   if (prevPos.x != tankPos.x || prevPos.y != tankPos.y || prevPos.dir != tankPos.dir)
   {
     Graphics::ClearSprite(prevPos.x, prevPos.y);
-    Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, TANK_P1);
+    Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, tankPos.type);
   }
 }
 
-void updateTankFire(Tank& tankPos)
+void updateTankFire(Tank& tankPos, uint32_t buttonPin)
 {
   if (tankPos.reload > 0)
   {
     --tankPos.reload;
   }
-  if ((tankPos.reload == 0) && (!digitalRead(JOYSTICK_BUTTON_PIN)))
+  if ((tankPos.reload == 0) && (!digitalRead(buttonPin)))
   {
     tankPos.reload = RELOAD_FRAMES;
     for (size_t i = 0; i < MAX_BULLETS; ++i)
@@ -166,7 +169,7 @@ void updateTankFire(Tank& tankPos)
         bulletPos.x = tankPos.x + SPRITE_SIZE / 2;
         bulletPos.y = tankPos.y + SPRITE_SIZE / 2;
         bulletPos.dir = tankPos.dir;
-        bulletPos.owner = TANK_P1;
+        bulletPos.owner = tankPos.type;
         bulletPos.state = BULLET_STATE_FLYING;
         Graphics::DrawBullet(bulletPos.x, bulletPos.y);
         return;
@@ -281,6 +284,11 @@ void drawLevel()
 void setup() {
   // put your setup code here, to run once:
   pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(JOYSTICK2_BUTTON_PIN, INPUT_PULLUP);
+  pinMode(JOYSTICK_X_PIN, INPUT_ANALOG);
+  pinMode(JOYSTICK_Y_PIN, INPUT_ANALOG);
+  pinMode(JOYSTICK2_X_PIN, INPUT_ANALOG);
+  pinMode(JOYSTICK2_Y_PIN, INPUT_ANALOG);
   Graphics::InitScreen();
   drawLevel();
   Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, tankPos.type);
@@ -299,8 +307,10 @@ void loop() {
     if (timePassed >= lastStepTime + TANK_STEP_DURATION)
     {
       lastStepTime = timePassed;
-      updateTankPos(tankPos);
-      updateTankFire(tankPos);
+      updateTankPos(tankPos, JOYSTICK_X_PIN, JOYSTICK_Y_PIN);
+      updateTankFire(tankPos, JOYSTICK_BUTTON_PIN);
+      updateTankPos(tankPos2, JOYSTICK2_X_PIN, JOYSTICK2_Y_PIN);
+      updateTankFire(tankPos2, JOYSTICK2_BUTTON_PIN);
     }
     if (timePassed >= lastBulletsTime + BULLET_STEP_DURATION)
     {

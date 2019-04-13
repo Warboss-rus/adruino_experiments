@@ -6,7 +6,7 @@
 
 OneWire ds(PA3);
 Adafruit_BMP085_Unified  bmp;
-RF24 radio(PB0, PA4); // CE, CSN
+RF24 radio(PB11, PA4); // CE, CSN
 
 unsigned long lastTempUpdateTime = 0;
 const byte address[6] = "12345";
