@@ -1,5 +1,5 @@
-#define TANK_STEP_DURATION 100
-#define BULLET_STEP_DURATION 33
+#define TANK_STEP_DURATION 50
+#define BULLET_STEP_DURATION 20
 #define RELOAD_FRAMES 40
 #define MAX_BULLETS 10
 #define BULLET_STATE_FLYING 255
@@ -95,60 +95,128 @@ Direction getCurrentDirection(uint32_t xPin, uint32_t yPin)
   return DIR_NONE;
 }
 
-void updateTankPos(Tank& tankPos, uint32_t xPin, uint32_t yPin)
+bool tryToFixPos(Tank& newPos, const Tank& prevPos)
 {
-  Tank prevPos = tankPos;
+  if (newPos.x != prevPos.x)
+  {
+    // try to move down a pixel
+    TileType tile1 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y + 1) / SPRITE_SIZE);
+    TileType tile2 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE) / SPRITE_SIZE);
+    TileType tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y + 1) / SPRITE_SIZE);
+    TileType tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE) / SPRITE_SIZE);
+    if ((tile1 == NONE) && (tile2 == NONE) && (tile3 == NONE) && (tile4 == NONE))
+    {
+      newPos.y++;
+      return true;
+    }
+    // try to move up a pixel
+    tile1 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y - 1) / SPRITE_SIZE);
+    tile2 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 2) / SPRITE_SIZE);
+    tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y - 1) / SPRITE_SIZE);
+    tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 2) / SPRITE_SIZE);
+    if ((tile1 == NONE) && (tile2 == NONE) && (tile3 == NONE) && (tile4 == NONE))
+    {
+      newPos.y--;
+      return true;
+    }
+  }
+  if (newPos.y != prevPos.y)
+  {
+    // try to move right a pixel
+    TileType tile1 = Terrain::GetTile((tankPos.x + 1) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
+    TileType tile2 = Terrain::GetTile((tankPos.x + 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+    TileType tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
+    TileType tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+    if ((tile1 == NONE) && (tile2 == NONE) && (tile3 == NONE) && (tile4 == NONE))
+    {
+      newPos.x++;
+      return true;
+    }
+    // try to move left a pixel
+    tile1 = Terrain::GetTile((tankPos.x - 1) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
+    tile2 = Terrain::GetTile((tankPos.x - 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+    tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 2) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
+    tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 2) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+    if ((tile1 == NONE) && (tile2 == NONE) && (tile3 == NONE) && (tile4 == NONE))
+    {
+      newPos.x--;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool collidesWithTank(const Tank& tank1, const Tank& tank2)
+{
+  if (&tank1 == &tank2 || !tank2.lives)
+  {
+    return false;
+  }
+  return ((tank1.x <= (tank2.x + SPRITE_SIZE)) && ((tank1.x + SPRITE_SIZE) >= tank2.x) && (tank1.y <= (tank2.y + SPRITE_SIZE)) && ((tank1.y + SPRITE_SIZE) >= tank2.y));
+}
+
+void updateTankPos(Tank& tank, uint32_t xPin, uint32_t yPin)
+{
+  Tank prevPos = tank;
   switch (getCurrentDirection(xPin, yPin))
   {
     case DIR_LEFT:
       {
-        tankPos.dir = DIR_LEFT;
-        if (tankPos.x > 0)
+        tank.dir = DIR_LEFT;
+        if (tank.x > 0)
         {
-          --tankPos.x;
+          --tank.x;
         }
       } break;
     case DIR_UP:
       {
-        tankPos.dir = DIR_UP;
-        if (tankPos.y > 0)
+        tank.dir = DIR_UP;
+        if (tank.y > 0)
         {
-          --tankPos.y;
+          --tank.y;
         }
       } break;
     case DIR_RIGHT:
       {
-        tankPos.dir = DIR_RIGHT;
-        if (tankPos.x + SPRITE_SIZE < SCREEN_WIDTH)
+        tank.dir = DIR_RIGHT;
+        if (tank.x + SPRITE_SIZE < SCREEN_WIDTH)
         {
-          ++tankPos.x;
+          ++tank.x;
         }
       } break;
     case DIR_DOWN:
       {
-        tankPos.dir = DIR_DOWN;
-        if (tankPos.y + SPRITE_SIZE < SCREEN_HEIGHT)
+        tank.dir = DIR_DOWN;
+        if (tank.y + SPRITE_SIZE < SCREEN_HEIGHT)
         {
-          ++tankPos.y;
+          ++tank.y;
         }
       } break;
     default:
       return;
   }
   // check for collisions
-  TileType tile1 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
-  TileType tile2 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
-  TileType tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
-  TileType tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+  TileType tile1 = Terrain::GetTile(tank.x / SPRITE_SIZE, tank.y / SPRITE_SIZE);
+  TileType tile2 = Terrain::GetTile(tank.x / SPRITE_SIZE, (tank.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+  TileType tile3 = Terrain::GetTile((tank.x + SPRITE_SIZE - 1) / SPRITE_SIZE, tank.y / SPRITE_SIZE);
+  TileType tile4 = Terrain::GetTile((tank.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tank.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
   if ((tile1 != NONE) || (tile2 != NONE) || (tile3 != NONE) || (tile4 != NONE))
   {
-    tankPos.x = prevPos.x;
-    tankPos.y = prevPos.y;
+    if (!tryToFixPos(tank, prevPos))
+    {
+      tank.x = prevPos.x;
+      tank.y = prevPos.y;
+    }
   }
-  if (prevPos.x != tankPos.x || prevPos.y != tankPos.y || prevPos.dir != tankPos.dir)
+  if (collidesWithTank(tank, tankPos) || collidesWithTank(tank, tankPos2) || collidesWithTank(tank, tankEnemy1) || collidesWithTank(tank, tankEnemy2))
   {
-    Graphics::ClearMovingSprite(prevPos.x, prevPos.y, tankPos.x, tankPos.y);
-    Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, tankPos.type);
+    tank.x = prevPos.x;
+    tank.y = prevPos.y;
+  }
+  if (prevPos.x != tank.x || prevPos.y != tank.y || prevPos.dir != tank.dir)
+  {
+    Graphics::ClearMovingSprite(prevPos.x, prevPos.y, tank.x, tank.y);
+    Graphics::DrawTank(tank.x, tank.y, tank.dir, tank.type);
   }
 }
 
@@ -168,7 +236,7 @@ void updateTankFire(Tank& tankPos, uint32_t buttonPin)
       {
         bulletPos.x = tankPos.x + SPRITE_SIZE / 2;
         bulletPos.y = tankPos.y + SPRITE_SIZE / 2;
-        switch(tankPos.dir)
+        switch (tankPos.dir)
         {
           case DIR_UP:
             bulletPos.y = tankPos.y - 1;
