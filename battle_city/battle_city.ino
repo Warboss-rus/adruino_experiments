@@ -1,5 +1,5 @@
 #define TANK_STEP_DURATION 100
-#define BULLET_STEP_DURATION 40
+#define BULLET_STEP_DURATION 33
 #define RELOAD_FRAMES 40
 #define MAX_BULLETS 10
 #define BULLET_STATE_FLYING 255
@@ -147,7 +147,7 @@ void updateTankPos(Tank& tankPos, uint32_t xPin, uint32_t yPin)
   }
   if (prevPos.x != tankPos.x || prevPos.y != tankPos.y || prevPos.dir != tankPos.dir)
   {
-    Graphics::ClearSprite(prevPos.x, prevPos.y);
+    Graphics::ClearMovingSprite(prevPos.x, prevPos.y, tankPos.x, tankPos.y);
     Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, tankPos.type);
   }
 }
@@ -168,6 +168,21 @@ void updateTankFire(Tank& tankPos, uint32_t buttonPin)
       {
         bulletPos.x = tankPos.x + SPRITE_SIZE / 2;
         bulletPos.y = tankPos.y + SPRITE_SIZE / 2;
+        switch(tankPos.dir)
+        {
+          case DIR_UP:
+            bulletPos.y = tankPos.y - 1;
+            break;
+          case DIR_DOWN:
+            bulletPos.y = tankPos.y + SPRITE_SIZE + 1;
+            break;
+          case DIR_LEFT:
+            bulletPos.x = tankPos.x - 1;
+            break;
+          case DIR_RIGHT:
+            bulletPos.x = tankPos.x + SPRITE_SIZE + 1;
+            break;
+        }
         bulletPos.dir = tankPos.dir;
         bulletPos.owner = tankPos.type;
         bulletPos.state = BULLET_STATE_FLYING;

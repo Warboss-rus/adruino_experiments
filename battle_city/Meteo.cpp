@@ -26,6 +26,7 @@ void setupMeteo()
   radio.openWritingPipe(address);
   radio.setPALevel(RF24_PA_MIN);
   radio.stopListening();
+  Serial.begin(115200);
 }
 
 void updateMeteo()
@@ -51,5 +52,13 @@ void updateMeteo()
     bmp.getPressure(&P);
     state.pressure = (unsigned int)P;
     radio.write(&state, METEO_STATE_DATA_SIZE);
+    Serial.print("T=");
+    Serial.print( state.temperature);
+    Serial.print("C P=");
+    Serial.print( state.pressure);
+    Serial.print("Pa (");
+    float mmHg = P * 0.0075006157584566;
+    Serial.print(mmHg);
+    Serial.println(" mmHg)");
   }
 }

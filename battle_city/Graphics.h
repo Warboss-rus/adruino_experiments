@@ -7,6 +7,7 @@ class Graphics
     static void InitScreen();
     static void ClearScreen();
     static void ClearSprite(byte x, byte y);
+    static void ClearMovingSprite(byte oldX, byte oldY, byte newX, byte newY);
     static void ClearBullet(byte x, byte y);
     static void DrawBricks(byte x, byte y);
     static void DrawArmour(byte x, byte y);

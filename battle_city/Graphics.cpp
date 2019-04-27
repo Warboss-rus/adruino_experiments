@@ -3,7 +3,7 @@
 #include <Adafruit_GFX.h> // core graphics library
 #include <Adafruit_ST7735.h> // hardware-specific library
 
-Adafruit_ST7735 tft(PB5, PB3, PB4);
+Adafruit_ST7735 tft(PB5, PB4, PB3);
 
 const byte TANK_SPRITE[] PROGMEM  = {
   B00001000,
@@ -186,6 +186,26 @@ void Graphics::ClearSprite(byte x, byte y)
   tft.fillRect(x, y, SPRITE_SIZE, SPRITE_SIZE, ST7735_BLACK);
 }
 
+void Graphics::ClearMovingSprite(byte oldX, byte oldY, byte newX, byte newY)
+{
+  if (newX > oldX)
+  {
+    tft.fillRect(oldX, oldY, newX - oldX, SPRITE_SIZE, ST7735_BLACK);
+  }
+  if (newX < oldX)
+  {
+     tft.fillRect(newX + SPRITE_SIZE, oldY, newX - oldX, SPRITE_SIZE, ST7735_BLACK);
+  }
+  if (newY > oldY)
+  {
+    tft.fillRect(oldX, oldY, SPRITE_SIZE, newY - oldY, ST7735_BLACK);
+  }
+  if (newY < oldY)
+  {
+    tft.fillRect(oldX, newY + SPRITE_SIZE, SPRITE_SIZE, newY - oldY, ST7735_BLACK);
+  }
+}
+
 void Graphics::DrawBullet(byte x, byte y)
 {
   tft.fillRect(x - BULLET_SIZE / 2, y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE, BULLET_COLOR);
@@ -223,7 +243,7 @@ void Graphics::DrawHQ(byte x, byte y)
 
 void Graphics::DrawTank(byte x, byte y, Direction dir, TankIndex index)
 {
-  drawTransparentSprite(x, y, getTankSprite(dir), TANK_COLORS[index]);
+  drawSprite(x, y, getTankSprite(dir), TANK_COLORS[index], ST7735_BLACK);
 }
 
 void Graphics::DrawExplosion(byte x, byte y, byte frame)
