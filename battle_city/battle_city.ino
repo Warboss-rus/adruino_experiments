@@ -100,20 +100,20 @@ bool tryToFixPos(Tank& newPos, const Tank& prevPos)
   if (newPos.x != prevPos.x)
   {
     // try to move down a pixel
-    TileType tile1 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y + 1) / SPRITE_SIZE);
-    TileType tile2 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE) / SPRITE_SIZE);
-    TileType tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y + 1) / SPRITE_SIZE);
-    TileType tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE) / SPRITE_SIZE);
+    TileType tile1 = Terrain::GetTile(newPos.x / SPRITE_SIZE, (newPos.y + 1) / SPRITE_SIZE);
+    TileType tile2 = Terrain::GetTile(newPos.x / SPRITE_SIZE, (newPos.y + SPRITE_SIZE) / SPRITE_SIZE);
+    TileType tile3 = Terrain::GetTile((newPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (newPos.y + 1) / SPRITE_SIZE);
+    TileType tile4 = Terrain::GetTile((newPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (newPos.y + SPRITE_SIZE) / SPRITE_SIZE);
     if ((tile1 == NONE) && (tile2 == NONE) && (tile3 == NONE) && (tile4 == NONE))
     {
       newPos.y++;
       return true;
     }
     // try to move up a pixel
-    tile1 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y - 1) / SPRITE_SIZE);
-    tile2 = Terrain::GetTile(tankPos.x / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 2) / SPRITE_SIZE);
-    tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y - 1) / SPRITE_SIZE);
-    tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 2) / SPRITE_SIZE);
+    tile1 = Terrain::GetTile(newPos.x / SPRITE_SIZE, (newPos.y - 1) / SPRITE_SIZE);
+    tile2 = Terrain::GetTile(newPos.x / SPRITE_SIZE, (newPos.y + SPRITE_SIZE - 2) / SPRITE_SIZE);
+    tile3 = Terrain::GetTile((newPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (newPos.y - 1) / SPRITE_SIZE);
+    tile4 = Terrain::GetTile((newPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (newPos.y + SPRITE_SIZE - 2) / SPRITE_SIZE);
     if ((tile1 == NONE) && (tile2 == NONE) && (tile3 == NONE) && (tile4 == NONE))
     {
       newPos.y--;
@@ -123,20 +123,20 @@ bool tryToFixPos(Tank& newPos, const Tank& prevPos)
   if (newPos.y != prevPos.y)
   {
     // try to move right a pixel
-    TileType tile1 = Terrain::GetTile((tankPos.x + 1) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
-    TileType tile2 = Terrain::GetTile((tankPos.x + 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
-    TileType tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
-    TileType tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+    TileType tile1 = Terrain::GetTile((newPos.x + 1) / SPRITE_SIZE, newPos.y / SPRITE_SIZE);
+    TileType tile2 = Terrain::GetTile((newPos.x + 1) / SPRITE_SIZE, (newPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+    TileType tile3 = Terrain::GetTile((newPos.x + SPRITE_SIZE) / SPRITE_SIZE, newPos.y / SPRITE_SIZE);
+    TileType tile4 = Terrain::GetTile((newPos.x + SPRITE_SIZE) / SPRITE_SIZE, (newPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
     if ((tile1 == NONE) && (tile2 == NONE) && (tile3 == NONE) && (tile4 == NONE))
     {
       newPos.x++;
       return true;
     }
     // try to move left a pixel
-    tile1 = Terrain::GetTile((tankPos.x - 1) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
-    tile2 = Terrain::GetTile((tankPos.x - 1) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
-    tile3 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 2) / SPRITE_SIZE, tankPos.y / SPRITE_SIZE);
-    tile4 = Terrain::GetTile((tankPos.x + SPRITE_SIZE - 2) / SPRITE_SIZE, (tankPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+    tile1 = Terrain::GetTile((newPos.x - 1) / SPRITE_SIZE, newPos.y / SPRITE_SIZE);
+    tile2 = Terrain::GetTile((newPos.x - 1) / SPRITE_SIZE, (newPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+    tile3 = Terrain::GetTile((newPos.x + SPRITE_SIZE - 2) / SPRITE_SIZE, newPos.y / SPRITE_SIZE);
+    tile4 = Terrain::GetTile((newPos.x + SPRITE_SIZE - 2) / SPRITE_SIZE, (newPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
     if ((tile1 == NONE) && (tile2 == NONE) && (tile3 == NONE) && (tile4 == NONE))
     {
       newPos.x--;
@@ -155,10 +155,26 @@ bool collidesWithTank(const Tank& tank1, const Tank& tank2)
   return ((tank1.x <= (tank2.x + SPRITE_SIZE)) && ((tank1.x + SPRITE_SIZE) >= tank2.x) && (tank1.y <= (tank2.y + SPRITE_SIZE)) && ((tank1.y + SPRITE_SIZE) >= tank2.y));
 }
 
-void updateTankPos(Tank& tank, uint32_t xPin, uint32_t yPin)
+void updateTankPosPlayer(Tank& tank, uint32_t xPin, uint32_t yPin)
+{
+  updateTankPos(tank, getCurrentDirection(xPin, yPin));
+}
+
+void updateTankPosAI(Tank& tank)
+{
+  byte prevX = tank.x;
+  byte prevY = tank.y;
+  updateTankPos(tank, tank.dir);
+  if (tank.x == prevX && tank.y == prevY)
+  {
+    tank.dir = (Direction)((rand() % 4) + 1);
+  }
+}
+
+void updateTankPos(Tank& tank, Direction dir)
 {
   Tank prevPos = tank;
-  switch (getCurrentDirection(xPin, yPin))
+  switch (dir)
   {
     case DIR_LEFT:
       {
@@ -226,7 +242,7 @@ void updateTankFire(Tank& tankPos, uint32_t buttonPin)
   {
     --tankPos.reload;
   }
-  if ((tankPos.reload == 0) && (!digitalRead(buttonPin)))
+  if ((tankPos.reload == 0) && ((buttonPin == 0) || !digitalRead(buttonPin)))
   {
     tankPos.reload = RELOAD_FRAMES;
     for (size_t i = 0; i < MAX_BULLETS; ++i)
@@ -372,6 +388,7 @@ void setup() {
   pinMode(JOYSTICK_Y_PIN, INPUT_ANALOG);
   pinMode(JOYSTICK2_X_PIN, INPUT_ANALOG);
   pinMode(JOYSTICK2_Y_PIN, INPUT_ANALOG);
+  srand(analogRead(PB9));
   Graphics::InitScreen();
   drawLevel();
   Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, tankPos.type);
@@ -390,10 +407,14 @@ void loop() {
     if (timePassed >= lastStepTime + TANK_STEP_DURATION)
     {
       lastStepTime = timePassed;
-      updateTankPos(tankPos, JOYSTICK_X_PIN, JOYSTICK_Y_PIN);
+      updateTankPosPlayer(tankPos, JOYSTICK_X_PIN, JOYSTICK_Y_PIN);
       updateTankFire(tankPos, JOYSTICK_BUTTON_PIN);
-      updateTankPos(tankPos2, JOYSTICK2_X_PIN, JOYSTICK2_Y_PIN);
+      updateTankPosPlayer(tankPos2, JOYSTICK2_X_PIN, JOYSTICK2_Y_PIN);
       updateTankFire(tankPos2, JOYSTICK2_BUTTON_PIN);
+      updateTankPosAI(tankEnemy1);
+      updateTankPosAI(tankEnemy2);
+      updateTankFire(tankEnemy1, 0);
+      updateTankFire(tankEnemy2, 0);
     }
     if (timePassed >= lastBulletsTime + BULLET_STEP_DURATION)
     {
