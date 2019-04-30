@@ -155,17 +155,33 @@ struct MusicPlaying
   uint32_t lastPlayedTimestamp;
 } music = {false, NULL, 0, 0, 0, 0};
 
-void playIntroMusic()
+void Sound::PlayIntroMusic()
 {
   music = MusicPlaying{true, Melody0, Melody0_Length, 0, 0, millis() };
 }
 
-void setupSound()
+void Sound::FireSound()
+{
+  if(!music.playing)
+  {
+    tone(tonePin, 3000, 200);
+  }
+}
+
+void Sound::ExplosionSound()
+{
+  if(!music.playing)
+  {
+    tone(tonePin, 400, 400);
+  }
+}
+
+void Sound::Setup()
 {
   pinMode(tonePin, OUTPUT);
 }
 
-void updateSound()
+void Sound::Update()
 {
   if (music.playing)
   {

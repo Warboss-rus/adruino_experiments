@@ -174,6 +174,10 @@ void updateTankPosAI(Tank& tank)
 
 void updateTankPos(Tank& tank, Direction dir)
 {
+  if (tank.lives == 0)
+  {
+    return;
+  }
   Tank prevPos = tank;
   switch (dir)
   {
@@ -239,6 +243,10 @@ void updateTankPos(Tank& tank, Direction dir)
 
 void updateTankFire(Tank& tankPos, uint32_t buttonPin)
 {
+  if (tankPos.lives == 0)
+  {
+    return;
+  }
   if (tankPos.reload > 0)
   {
     --tankPos.reload;
@@ -272,6 +280,7 @@ void updateTankFire(Tank& tankPos, uint32_t buttonPin)
         bulletPos.owner = tankPos.type;
         bulletPos.state = BULLET_STATE_FLYING;
         Graphics::DrawBullet(bulletPos.x, bulletPos.y);
+        Sound::FireSound();
         return;
       }
     }
@@ -327,6 +336,7 @@ bool updateBullet(Bullet& bullet)
     bullet.y = bullet.y / SPRITE_SIZE * SPRITE_SIZE;
     bullet.state = EXPLOSION_FRAMES;
     Graphics::DrawExplosion(bullet.x, bullet.y, bullet.state);
+    Sound::ExplosionSound();
     if (tile == HQ)
     {
       gameOver = true;
@@ -396,10 +406,10 @@ void setup() {
   Graphics::DrawTank(tankPos2.x, tankPos2.y, tankPos2.dir, tankPos2.type);
   Graphics::DrawTank(tankEnemy1.x, tankEnemy1.y, tankEnemy1.dir, tankEnemy1.type);
   Graphics::DrawTank(tankEnemy2.x, tankEnemy2.y, tankEnemy2.dir, tankEnemy2.type);
-  setupSound();
-
   setupMeteo();
-  playIntroMusic();
+
+  Sound::Setup();
+  Sound::PlayIntroMusic();
 }
 
 void loop() {
@@ -425,6 +435,6 @@ void loop() {
       updateBullets();
     }
   }
-  updateSound();
+  Sound::Update();
   updateMeteo();
 }
