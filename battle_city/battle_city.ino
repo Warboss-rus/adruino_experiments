@@ -18,6 +18,7 @@
 #include "Graphics.h"
 #include "Meteo.h"
 #include "Terrain.h"
+#include "Sound.h"
 
 struct Tank
 {
@@ -395,8 +396,10 @@ void setup() {
   Graphics::DrawTank(tankPos2.x, tankPos2.y, tankPos2.dir, tankPos2.type);
   Graphics::DrawTank(tankEnemy1.x, tankEnemy1.y, tankEnemy1.dir, tankEnemy1.type);
   Graphics::DrawTank(tankEnemy2.x, tankEnemy2.y, tankEnemy2.dir, tankEnemy2.type);
+  setupSound();
 
   setupMeteo();
+  playIntroMusic();
 }
 
 void loop() {
@@ -422,5 +425,6 @@ void loop() {
       updateBullets();
     }
   }
+  updateSound();
   updateMeteo();
 }
