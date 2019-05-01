@@ -47,6 +47,10 @@ static const char HTML_SCRIPT[] PROGMEM = "<script>"
     "var socket = new WebSocket(\"ws://\" + window.location.hostname + \":9000\");"
     "socket.onmessage = function(event) {"
     "  history.push(event.data);"
+    "  document.getElementById('temp').innerText = event.data.temp;"
+    "  document.getElementById('pressure').innerText = event.data.pressure / 133.3224;"
+    "  document.getElementById('pressurePa').innerText = event.data.pressure;"
+    "  document.getElementById('humidity').innerText = event.data.humidity;"
     "  drawGraph();"
     "}"
     "</script>";
@@ -56,15 +60,15 @@ String formatHTML(const MeteoState& currentState)
   float pressureMmHg = currentState.pressure / 133.3224f;
   String htmlContent = "<!DOCTYPE html><html><link rel=\"icon\" href=\"data:,\">";
   htmlContent += FPSTR(HTML_SCRIPT);
-  htmlContent += "<body><h1>ESP8266 Temp monitor</h1><p>Current temperature: ";
+  htmlContent += "<body><h1>ESP8266 Temp monitor</h1><p>Current temperature: <span id='temp'>";
   htmlContent += String(currentState.temperature, 2);
-  htmlContent += "&degC<br>Current pressure: ";
+  htmlContent += "</span>&degC<br>Current pressure: <span id='pressure'>";
   htmlContent += String(pressureMmHg);
-  htmlContent += " mmHg (";
+  htmlContent += "</span> mmHg (<span id='pressurePa'>";
   htmlContent += String(currentState.pressure);
-  htmlContent += " Pa)<br>Current humidity: ";
+  htmlContent += "</span> Pa)<br>Current humidity: <span id='humidity'>";
   htmlContent += String(currentState.humidity, 2);
-  htmlContent += "%</p><br><canvas id=\"historyGraph\" width=\"1000px\" height=\"400px\" style=\"border: 1px solid #000000;\" hidden></canvas></body></html>";
+  htmlContent += "</span>%</p><br><canvas id=\"historyGraph\" width=\"1000px\" height=\"400px\" style=\"border: 1px solid #000000;\" hidden></canvas></body></html>";
   return htmlContent;
 }
 
