@@ -23,6 +23,7 @@ class MeteoStorage
       {
         m_historyStart = (m_historyStart + 1) % HISTORY_SIZE;
       }
+      m_currentState = state;
     }
 
     size_t size() const

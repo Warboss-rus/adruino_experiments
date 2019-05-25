@@ -64,8 +64,6 @@ void printNotFound() {
 void setup()
 {
   Serial.begin(115200);
-  Serial.println();
-
   WiFi.begin(ssid, password);
 
   Serial.print("Connecting");
@@ -79,8 +77,8 @@ void setup()
   Serial.print("Connected, IP address: ");
   Serial.println(WiFi.localIP());
 
-  if (MDNS.begin("esp8266")) {
-    Serial.println("MDNS responder started");
+  if (!MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder failed");
   }
 
   setupOTA();
