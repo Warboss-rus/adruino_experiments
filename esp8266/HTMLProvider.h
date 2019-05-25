@@ -52,6 +52,7 @@ static const char HTML_SCRIPT[] PROGMEM = "<script>"
     "  document.getElementById('pressure').innerText = Math.round(data.pres / 133.3224 * 100) / 100;"
     "  document.getElementById('pressurePa').innerText = data.pres;"
     "  document.getElementById('humidity').innerText = data.hum;"
+    "  document.getElementById('timestamp').innerText = new Date(data.time * 1000).toLocaleString();"
     "  drawGraph();"
     "}"
     "</script>";
@@ -69,7 +70,8 @@ String formatHTML(const MeteoState& currentState)
   htmlContent += String(currentState.pressure);
   htmlContent += "</span> Pa)<br>Current humidity: <span id='humidity'>";
   htmlContent += String(currentState.humidity, 2);
-  htmlContent += "</span>%</p><br><canvas id=\"historyGraph\" width=\"1000px\" height=\"400px\" style=\"border: 1px solid #000000;\" hidden></canvas></body></html>";
+  htmlContent += "</span>%<br>Timestamp: <span id='timestamp'>";
+  htmlContent += "</span></p><br><canvas id=\"historyGraph\" width=\"1000px\" height=\"400px\" style=\"border: 1px solid #000000;\" hidden></canvas></body></html>";
   return htmlContent;
 }
 
@@ -81,6 +83,8 @@ String stateToJSON(const MeteoState& state)
   result += String(state.pressure);
   result += ",\"hum\":";
   result += String(state.humidity, 2);
+  result += ",\"time\":";
+  result += String(state.timestamp);
   result += "}";
   return result;
 }

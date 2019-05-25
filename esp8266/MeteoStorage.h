@@ -5,6 +5,7 @@ struct MeteoState
   float temperature;
   float humidity;
   unsigned int pressure;
+  unsigned long timestamp;
 };
 
 class MeteoStorage
