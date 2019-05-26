@@ -4,6 +4,7 @@
 #include <WebSocketsServer.h>
 #include "MeteoStorage.h"
 #include "HTMLProvider.h"
+#include "WiFiCredentials.h"
 #include "OTA.h"
 #include "NTP.h"
 
@@ -11,12 +12,10 @@
 #define WEBSOCKET_PORT 9000
 #define METEO_STATE_DATA_SIZE 12
 
-const char* ssid = "WARBOSS-RUS-Zyxel";
-const char* password = "jnr7-zs7v-0caz";
-
 ESP8266WebServer server(SERVER_PORT);
 WebSocketsServer webSocket(WEBSOCKET_PORT);
 MeteoStorage storage;
+NTPTime ntp;
 
 void readDataFromSerial()
 {
@@ -28,7 +27,7 @@ void readDataFromSerial()
     {
       data[i] = Serial.read();
     }
-    currentState.timestamp = getTimeStamp();
+    currentState.timestamp = ntp.getTimeStamp();
     storage.PushNewState(currentState);
     String stateText = stateToJSON(currentState);
     webSocket.broadcastTXT(stateText);
@@ -76,7 +75,7 @@ void setup()
   }
   Serial.println();
 
-  initNTPTime();
+  ntp.init();
 
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
