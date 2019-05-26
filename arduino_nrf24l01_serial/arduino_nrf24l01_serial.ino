@@ -1,22 +1,24 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <U8g2lib.h>
-U8G2_ST7920_128X64_1_SW_SPI u8g2(U8G2_R0, 6, 3, 5);
 
+U8G2_ST7920_128X64_1_SW_SPI u8g2(U8G2_R0, 6, 3, 5);
 RF24 radio(7, 8); // CE, CSN
 
 const byte address[6] = "12345";
-String lastMessage;
 
 struct MeteoState
 {
   float temperature;
   float humidity;
   uint32_t pressure;
-};
+} state = {};
 #define METEO_STATE_DATA_SIZE 12
 
-void printState(const MeteoState& state)
+String lastMessage;
+bool messageEnded = false;
+
+void printState()
 {
   String tempString = "Temp: ";
   tempString += String(state.temperature);
@@ -47,25 +49,45 @@ void setup()
   radio.setPALevel(RF24_PA_MIN);
   radio.startListening();
   u8g2.begin();
-  printState(MeteoState{0.f, 0.f, 0});
+  printState();
 }
 
 void loop()
 {
   // put your main code here, to run repeatedly:
-  if (Serial.available()) 
+  bool needPrintState = false;
+  while (Serial.available())
   {
-    lastMessage = Serial.readString();
+    int symbol = Serial.read();
+    switch (symbol)
+    {
+      case -1:
+      case '\n':
+      case '\r':
+        messageEnded = true;
+        break;
+      default:
+        if (messageEnded)
+        {
+          lastMessage = String();
+          messageEnded = false;
+        }
+        lastMessage += (char)symbol;
+    }
+    needPrintState = true;
   }
-  if (radio.available()) 
+  if (radio.available())
   {
-    MeteoState state;
     radio.read(&state, METEO_STATE_DATA_SIZE);
     const byte* data = (const byte*)&state;
     for (unsigned int i = 0; i < METEO_STATE_DATA_SIZE; ++i)
     {
       Serial.write(data[i]);
     }
-    printState(state);
+    needPrintState = true;
+  }
+  if (needPrintState)
+  {
+    printState();
   }
 }
