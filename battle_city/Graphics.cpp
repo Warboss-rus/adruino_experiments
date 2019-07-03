@@ -1,9 +1,6 @@
-#include "Arduino.h"
+#include <Arduino.h>
 #include "Graphics.h"
-#include <Adafruit_GFX.h> // core graphics library
-#include <Adafruit_ST7735.h> // hardware-specific library
-
-Adafruit_ST7735 tft(PB5, PB4, PB3);
+#include "Display.h"
 
 const byte TANK_SPRITE[] PROGMEM  = {
   B00001000,
@@ -126,6 +123,7 @@ const byte EXPLISION_ACCENT[] PROGMEM = {
   B00000000,
 };
 
+const uint16_t COLOR_BLACK = 0x0; //0x000000
 const uint16_t BRICK_FRONT_COLOR = 0x9A40; //0x9c4a00
 const uint16_t BRICK_BACK_COLOR = 0x630C; //0x636363
 const uint16_t P1_TANK_COLOR = 0xE4E4; //0xe79c21
@@ -161,101 +159,99 @@ const byte* getTankSprite(Direction dir)
   return NULL;
 }
 
-void drawSprite(byte x, byte y, const byte* sprite, uint16_t frontColor, uint16_t backColor)
+void Graphics::DrawSprite(byte x, byte y, const byte* sprite, uint16_t frontColor, uint16_t backColor)
 {
-  tft.drawBitmap(x, y, sprite, SPRITE_SIZE, SPRITE_SIZE, frontColor, backColor);
+  Display::DrawSprite(x, y, SPRITE_SIZE, SPRITE_SIZE, sprite, frontColor, backColor);
 }
 
-void drawTransparentSprite(byte x, byte y, const byte* sprite, uint16_t color)
+void Graphics::DrawTransparentSprite(byte x, byte y, const byte* sprite, uint16_t color)
 {
-  tft.drawBitmap(x, y, sprite, SPRITE_SIZE, SPRITE_SIZE, color);
+  Display::DrawTransparentSprite(x, y, SPRITE_SIZE, SPRITE_SIZE, sprite, color);
 }
 
 void Graphics::InitScreen()
 {
-  tft.initR(INITR_BLACKTAB);
+  Display::Init();
 }
 
 void Graphics::ClearScreen()
 {
-  tft.fillScreen(ST7735_BLACK);
+  Display::ClearScreen(COLOR_BLACK);
 }
 
-void Graphics::ClearSprite(byte x, byte y)
+void Graphics::ClearSprite(Point pos)
 {
-  tft.fillRect(x, y, SPRITE_SIZE, SPRITE_SIZE, ST7735_BLACK);
+  Display::FillRect(pos.x, pos.y, SPRITE_SIZE, SPRITE_SIZE, COLOR_BLACK);
 }
 
-void Graphics::ClearMovingSprite(byte oldX, byte oldY, byte newX, byte newY)
+void Graphics::ClearMovingSprite(Point oldPos, Point newPos)
 {
-  if (newX > oldX)
+  if (newPos.x > oldPos.x)
   {
-    tft.fillRect(oldX, oldY, newX - oldX, SPRITE_SIZE, ST7735_BLACK);
+    Display::FillRect(oldPos.x, oldPos.y, newPos.x - oldPos.x, SPRITE_SIZE, COLOR_BLACK);
   }
-  if (newX < oldX)
+  if (newPos.x < oldPos.x)
   {
-     tft.fillRect(newX + SPRITE_SIZE, oldY, newX - oldX, SPRITE_SIZE, ST7735_BLACK);
+    Display::FillRect(newPos.x + SPRITE_SIZE, oldPos.y, oldPos.x - newPos.x, SPRITE_SIZE, COLOR_BLACK);
   }
-  if (newY > oldY)
+  if (newPos.y > oldPos.y)
   {
-    tft.fillRect(oldX, oldY, SPRITE_SIZE, newY - oldY, ST7735_BLACK);
+    Display::FillRect(oldPos.x, oldPos.y, SPRITE_SIZE, newPos.y - oldPos.y, COLOR_BLACK);
   }
-  if (newY < oldY)
+  if (newPos.y < oldPos.y)
   {
-    tft.fillRect(oldX, newY + SPRITE_SIZE, SPRITE_SIZE, newY - oldY, ST7735_BLACK);
+    Display::FillRect(oldPos.x, newPos.y + SPRITE_SIZE, SPRITE_SIZE, oldPos.y - newPos.y, COLOR_BLACK);
   }
 }
 
-void Graphics::DrawBullet(byte x, byte y)
+void Graphics::DrawBullet(Point pos)
 {
-  tft.fillRect(x - BULLET_SIZE / 2, y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE, BULLET_COLOR);
+  Display::FillRect(pos.x - BULLET_SIZE / 2, pos.y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE, BULLET_COLOR);
 }
 
-void Graphics::ClearBullet(byte x, byte y)
+void Graphics::ClearBullet(Point pos)
 {
-  tft.fillRect(x - BULLET_SIZE / 2, y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE, ST7735_BLACK);
+  Display::FillRect(pos.x - BULLET_SIZE / 2, pos.y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE, COLOR_BLACK);
 }
 
 void Graphics::DrawBricks(byte x, byte y)
 {
-  drawSprite(x, y, BRICK_SPRITE, BRICK_FRONT_COLOR, BRICK_BACK_COLOR);
+  Graphics::DrawSprite(x, y, BRICK_SPRITE, BRICK_FRONT_COLOR, BRICK_BACK_COLOR);
 }
 
 void Graphics::DrawArmour(byte x, byte y)
 {
-  drawSprite(x, y, ARMOUR_SPRITE, ARMOUR_FRONT_COLOR, ARMOUR_BACK_COLOR);
+  Graphics::DrawSprite(x, y, ARMOUR_SPRITE, ARMOUR_FRONT_COLOR, ARMOUR_BACK_COLOR);
 }
 
 void Graphics::DrawTrees(byte x, byte y)
 {
-  drawSprite(x, y, TREE_SPRITE, TREE_FRONT_COLOR, TREE_BACK_COLOR);
+  Graphics::DrawSprite(x, y, TREE_SPRITE, TREE_FRONT_COLOR, TREE_BACK_COLOR);
 }
 
 void Graphics::DrawWater(byte x, byte y)
 {
-  drawSprite(x, y, WATER_SPRITE, WATER_FRONT_COLOR, WATER_BACK_COLOR);
+  Graphics::DrawSprite(x, y, WATER_SPRITE, WATER_FRONT_COLOR, WATER_BACK_COLOR);
 }
 
 void Graphics::DrawHQ(byte x, byte y)
 {
-  drawTransparentSprite(x, y, HQ_SPRITE, HQ_COLOR);
+  Graphics::DrawTransparentSprite(x, y, HQ_SPRITE, HQ_COLOR);
 }
 
-void Graphics::DrawTank(byte x, byte y, Direction dir, TankIndex index)
+void Graphics::DrawTank(Point pos, Direction dir, TankIndex index)
 {
-  drawSprite(x, y, getTankSprite(dir), TANK_COLORS[index], ST7735_BLACK);
+  Graphics::DrawSprite(pos.x, pos.y, getTankSprite(dir), TANK_COLORS[index], COLOR_BLACK);
 }
 
 void Graphics::DrawExplosion(byte x, byte y, byte frame)
 {
-  drawSprite(x, y, EXPLOSION_BACK, EXPLOSION_BACK_COLOR, ST7735_BLACK);
-  drawTransparentSprite(x,y, EXPLOSION_FRONT, EXPLOSION_FRONT_COLOR);
-  drawTransparentSprite(x,y, EXPLISION_ACCENT, EXPLOSION_ACCENT_COLOR);
+  Graphics::DrawSprite(x, y, EXPLOSION_BACK, EXPLOSION_BACK_COLOR, COLOR_BLACK);
+  Graphics::DrawTransparentSprite(x, y, EXPLOSION_FRONT, EXPLOSION_FRONT_COLOR);
+  Graphics::DrawTransparentSprite(x, y, EXPLISION_ACCENT, EXPLOSION_ACCENT_COLOR);
 }
 
 void Graphics::DrawText(byte x, byte y, const char* text)
 {
-  tft.setCursor(x, y);
-  tft.setTextColor(TEXT_COLOR);
-  tft.print(text);
+  Display::DrawText(x, y, text, TEXT_COLOR);
 }

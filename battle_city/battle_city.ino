@@ -1,50 +1,14 @@
-#define TANK_STEP_DURATION 50
-#define BULLET_STEP_DURATION 20
-#define RELOAD_FRAMES 40
-#define MAX_BULLETS 10
-#define BULLET_STATE_FLYING 255
-#define EXPLOSION_FRAMES 5
-#define JOYSTICK_X_PIN PA0
-#define JOYSTICK_Y_PIN PA1
-#define JOYSTICK_BUTTON_PIN PA2
-#define JOYSTICK2_X_PIN PB0
-#define JOYSTICK2_Y_PIN PB1
-#define JOYSTICK2_BUTTON_PIN PB10
-#define JOYSTICK_DEADZONE_MIN 1024
-#define JOYSTICK_DEADZONE_MAX 3072
-#define JOYSTICK_NEUTRAL 2048
-
 #include "Common.h"
 #include "Graphics.h"
 #include "Meteo.h"
 #include "Terrain.h"
 #include "Sound.h"
-
-struct Tank
-{
-  byte x;
-  byte y;
-  Direction dir;
-  byte reload;
-  TankIndex type;
-  byte lives;
-};
-
-struct Bullet
-{
-  byte x;
-  byte y;
-  Direction dir;
-  TankIndex owner;
-  byte state; // 0 - disabled, 1-EXPLOSION_FRAMES - explosion, 255 - flying
-};
+#include "Input.h"
+#include "Tank.h"
 
 unsigned long lastStepTime = 0;
 unsigned long lastBulletsTime = 0;
-Tank tankPos = {40, 152, DIR_UP, 0, TANK_P1, 1};
-Tank tankPos2 = {72, 152, DIR_UP, 0, TANK_P2, 1};
-Tank tankEnemy1 = {0, 0, DIR_RIGHT, 0, TANK_ENEMY, 1};
-Tank tankEnemy2 = {120, 0, DIR_DOWN, 0, TANK_ENEMY, 1};
+TankManager tanks;
 Bullet bullets[MAX_BULLETS] = {};
 bool gameOver = false;
 
@@ -65,38 +29,7 @@ void drawTerrain(byte type, byte x, byte y)
   };
 }
 
-Direction getCurrentDirection(uint32_t xPin, uint32_t yPin)
-{
-  const int x = analogRead(xPin);
-  const int y = analogRead(yPin);
-  const int deltaX = abs(x - JOYSTICK_NEUTRAL);
-  const int deltaY = abs(y - JOYSTICK_NEUTRAL);
-  if (deltaX > deltaY)
-  {
-    if (x <= JOYSTICK_DEADZONE_MIN)
-    {
-      return DIR_LEFT;
-    }
-    else if (x >= JOYSTICK_DEADZONE_MAX)
-    {
-      return DIR_RIGHT;
-    }
-  }
-  else
-  {
-    if (y <= JOYSTICK_DEADZONE_MIN)
-    {
-      return DIR_UP;
-    }
-    else if (y >= JOYSTICK_DEADZONE_MAX)
-    {
-      return DIR_DOWN;
-    }
-  }
-  return DIR_NONE;
-}
-
-bool tryToFixPos(Tank& newPos, const Tank& prevPos)
+bool tryToFixPos(Point& newPos, const Point& prevPos)
 {
   if (newPos.x != prevPos.x)
   {
@@ -147,139 +80,133 @@ bool tryToFixPos(Tank& newPos, const Tank& prevPos)
   return false;
 }
 
-bool collidesWithTank(const Tank& tank1, const Tank& tank2)
+void updateTankPosPlayer(Tank& tank)
 {
-  if (&tank1 == &tank2 || !tank2.lives)
-  {
-    return false;
-  }
-  return ((tank1.x <= (tank2.x + SPRITE_SIZE)) && ((tank1.x + SPRITE_SIZE) >= tank2.x) && (tank1.y <= (tank2.y + SPRITE_SIZE)) && ((tank1.y + SPRITE_SIZE) >= tank2.y));
-}
-
-void updateTankPosPlayer(Tank& tank, uint32_t xPin, uint32_t yPin)
-{
-  updateTankPos(tank, getCurrentDirection(xPin, yPin));
+  updateTankPos(tank, Input::GetPlayerDirection(tank.GetType()));
 }
 
 void updateTankPosAI(Tank& tank)
 {
-  byte prevX = tank.x;
-  byte prevY = tank.y;
-  updateTankPos(tank, tank.dir);
-  if (tank.x == prevX && tank.y == prevY)
+  const Point prevPos = tank.GetPos();
+  updateTankPos(tank, tank.GetDirection());
+  const Point newPos = tank.GetPos();
+  if (newPos.x == prevPos.x && newPos.y == prevPos.y)
   {
-    tank.dir = (Direction)((rand() % 4) + 1);
+    tank.SetDirection((Direction)((rand() % 4) + 1));
   }
 }
 
 void updateTankPos(Tank& tank, Direction dir)
 {
-  if (tank.lives == 0)
+  if (!tank.IsAlive())
   {
     return;
   }
-  Tank prevPos = tank;
+  const Point prevPos = tank.GetPos();
+  const Direction prevDir = tank.GetDirection();
+  Point newPos = prevPos;
   switch (dir)
   {
     case DIR_LEFT:
       {
-        tank.dir = DIR_LEFT;
-        if (tank.x > 0)
+        tank.SetDirection(DIR_LEFT);
+        if (newPos.x > 0)
         {
-          --tank.x;
+          --newPos.x;
         }
       } break;
     case DIR_UP:
       {
-        tank.dir = DIR_UP;
-        if (tank.y > 0)
+        tank.SetDirection(DIR_UP);
+        if (newPos.y > 0)
         {
-          --tank.y;
+          --newPos.y;
         }
       } break;
     case DIR_RIGHT:
       {
-        tank.dir = DIR_RIGHT;
-        if (tank.x + SPRITE_SIZE < SCREEN_WIDTH)
+        tank.SetDirection(DIR_RIGHT);
+        if (newPos.x + SPRITE_SIZE < SCREEN_WIDTH)
         {
-          ++tank.x;
+          ++newPos.x;
         }
       } break;
     case DIR_DOWN:
       {
-        tank.dir = DIR_DOWN;
-        if (tank.y + SPRITE_SIZE < SCREEN_HEIGHT)
+        tank.SetDirection(DIR_DOWN);
+        if (newPos.y + SPRITE_SIZE < SCREEN_HEIGHT)
         {
-          ++tank.y;
+          ++newPos.y;
         }
       } break;
     default:
       return;
   }
   // check for collisions
-  TileType tile1 = Terrain::GetTile(tank.x / SPRITE_SIZE, tank.y / SPRITE_SIZE);
-  TileType tile2 = Terrain::GetTile(tank.x / SPRITE_SIZE, (tank.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
-  TileType tile3 = Terrain::GetTile((tank.x + SPRITE_SIZE - 1) / SPRITE_SIZE, tank.y / SPRITE_SIZE);
-  TileType tile4 = Terrain::GetTile((tank.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (tank.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+  TileType tile1 = Terrain::GetTile(newPos.x / SPRITE_SIZE, newPos.y / SPRITE_SIZE);
+  TileType tile2 = Terrain::GetTile(newPos.x / SPRITE_SIZE, (newPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
+  TileType tile3 = Terrain::GetTile((newPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, newPos.y / SPRITE_SIZE);
+  TileType tile4 = Terrain::GetTile((newPos.x + SPRITE_SIZE - 1) / SPRITE_SIZE, (newPos.y + SPRITE_SIZE - 1) / SPRITE_SIZE);
   if ((tile1 != NONE) || (tile2 != NONE) || (tile3 != NONE) || (tile4 != NONE))
   {
-    if (!tryToFixPos(tank, prevPos))
+    if (!tryToFixPos(newPos, prevPos))
     {
-      tank.x = prevPos.x;
-      tank.y = prevPos.y;
+      newPos.x = prevPos.x;
+      newPos.y = prevPos.y;
     }
   }
-  if (collidesWithTank(tank, tankPos) || collidesWithTank(tank, tankPos2) || collidesWithTank(tank, tankEnemy1) || collidesWithTank(tank, tankEnemy2))
+  tank.SetPosition(newPos);
+  if (tanks.CollidesWithTanks(tank))
   {
-    tank.x = prevPos.x;
-    tank.y = prevPos.y;
+    tank.SetPosition(prevPos);
   }
-  if (prevPos.x != tank.x || prevPos.y != tank.y || prevPos.dir != tank.dir)
+  if (prevPos.x != tank.GetPos().x || prevPos.y != tank.GetPos().y || prevDir != tank.GetDirection())
   {
-    Graphics::ClearMovingSprite(prevPos.x, prevPos.y, tank.x, tank.y);
-    Graphics::DrawTank(tank.x, tank.y, tank.dir, tank.type);
+    Graphics::ClearMovingSprite(prevPos, tank.GetPos());
+    Graphics::DrawTank(tank.GetPos(), tank.GetDirection(), tank.GetType());
   }
 }
 
-void updateTankFire(Tank& tankPos, uint32_t buttonPin)
+void updateTankFire(Tank& tank)
 {
-  if (tankPos.lives == 0)
+  if (!tank.IsAlive())
   {
     return;
   }
-  if (tankPos.reload > 0)
+  if (tank.IsReloading())
   {
-    --tankPos.reload;
+    tank.Reload();
   }
-  if ((tankPos.reload == 0) && ((buttonPin == 0) || !digitalRead(buttonPin)))
+  if (!tank.IsReloading() && ((tank.GetType() == TANK_ENEMY) || Input::GetFireButtonPressed(tank.GetType())))
   {
-    tankPos.reload = RELOAD_FRAMES;
+    tank.StartReload();
+    const Point tankPos = tank.GetPos();
     for (size_t i = 0; i < MAX_BULLETS; ++i)
     {
-      Bullet& bulletPos = bullets[i];
-      if (!bulletPos.state)
+      Bullet& bullet = bullets[i];
+      if (!bullet.state)
       {
-        bulletPos.x = tankPos.x + SPRITE_SIZE / 2;
-        bulletPos.y = tankPos.y + SPRITE_SIZE / 2;
-        switch (tankPos.dir)
+        bullet.pos.x = tankPos.x + SPRITE_SIZE / 2;
+        bullet.pos.y = tankPos.y + SPRITE_SIZE / 2;
+        switch (tank.GetDirection())
         {
           case DIR_UP:
-            bulletPos.y = tankPos.y - 1;
+            bullet.pos.y = tankPos.y - 1;
             break;
           case DIR_DOWN:
-            bulletPos.y = tankPos.y + SPRITE_SIZE + 1;
+            bullet.pos.y = tankPos.y + SPRITE_SIZE + 1;
             break;
           case DIR_LEFT:
-            bulletPos.x = tankPos.x - 1;
+            bullet.pos.x = tankPos.x - 1;
             break;
           case DIR_RIGHT:
-            bulletPos.x = tankPos.x + SPRITE_SIZE + 1;
+            bullet.pos.x = tankPos.x + SPRITE_SIZE + 1;
             break;
         }
-        bulletPos.dir = tankPos.dir;
-        bulletPos.owner = tankPos.type;
-        bulletPos.state = BULLET_STATE_FLYING;
-        Graphics::DrawBullet(bulletPos.x, bulletPos.y);
+        bullet.dir = tank.GetDirection();
+        bullet.owner = tank.GetType();
+        bullet.state = BULLET_STATE_FLYING;
+        Graphics::DrawBullet(bullet.pos);
         Sound::FireSound();
         return;
       }
@@ -287,23 +214,9 @@ void updateTankFire(Tank& tankPos, uint32_t buttonPin)
   }
 }
 
-bool collideWithTank(Bullet& bullet, Tank& tank)
-{
-  if (bullet.owner != tank.type && bullet.x >= tank.x && bullet.x < tank.x + SPRITE_SIZE && bullet.y >= tank.y && bullet.y < tank.y + SPRITE_SIZE && tank.lives > 0)
-  {
-    --tank.lives;
-    bullet.x = tank.x;
-    bullet.y = tank.y;
-    bullet.state = EXPLOSION_FRAMES;
-    Graphics::DrawExplosion(bullet.x, bullet.y, bullet.state);
-    return true;
-  }
-  return false;
-}
-
 bool updateBullet(Bullet& bullet)
 {
-  if ((bullet.dir == DIR_LEFT && bullet.x == 0) || (bullet.dir == DIR_RIGHT && bullet.x == SCREEN_WIDTH - 1) || (bullet.dir == DIR_UP && bullet.y == 0) || (bullet.dir == DIR_DOWN && bullet.y == SCREEN_HEIGHT - 1))
+  if ((bullet.dir == DIR_LEFT && bullet.pos.x == 0) || (bullet.dir == DIR_RIGHT && bullet.pos.x == SCREEN_WIDTH - 1) || (bullet.dir == DIR_UP && bullet.pos.y == 0) || (bullet.dir == DIR_DOWN && bullet.pos.y == SCREEN_HEIGHT - 1))
   {
     bullet.state = 0;
     return false;
@@ -311,42 +224,44 @@ bool updateBullet(Bullet& bullet)
   switch (bullet.dir)
   {
     case DIR_LEFT:
-      --bullet.x;
+      --bullet.pos.x;
       break;
     case DIR_RIGHT:
-      ++bullet.x;
+      ++bullet.pos.x;
       break;
     case DIR_UP:
-      --bullet.y;
+      --bullet.pos.y;
       break;
     case DIR_DOWN:
-      ++bullet.y;
+      ++bullet.pos.y;
       break;
   }
-  TileType tile = Terrain::GetTile(bullet.x / SPRITE_SIZE, bullet.y / SPRITE_SIZE);
+  TileType tile = Terrain::GetTile(bullet.pos.x / SPRITE_SIZE, bullet.pos.y / SPRITE_SIZE);
   if (tile == ARMOUR)
   {
-    bullet.state = false;
+    bullet.state = 0;
     return false;
   }
   if (tile == BRICK || tile == HQ)
   {
-    Terrain::ClearTile(bullet.x / SPRITE_SIZE, bullet.y / SPRITE_SIZE);
-    bullet.x = bullet.x / SPRITE_SIZE * SPRITE_SIZE;
-    bullet.y = bullet.y / SPRITE_SIZE * SPRITE_SIZE;
+    Terrain::ClearTile(bullet.pos.x / SPRITE_SIZE, bullet.pos.y / SPRITE_SIZE);
+    bullet.pos.x = bullet.pos.x / SPRITE_SIZE * SPRITE_SIZE;
+    bullet.pos.y = bullet.pos.y / SPRITE_SIZE * SPRITE_SIZE;
     bullet.state = EXPLOSION_FRAMES;
-    Graphics::DrawExplosion(bullet.x, bullet.y, bullet.state);
+    Graphics::DrawExplosion(bullet.pos.x, bullet.pos.y, bullet.state);
     Sound::ExplosionSound();
     if (tile == HQ)
     {
-      gameOver = true;
-      Graphics::DrawText(54, 72, "Game");
-      Graphics::DrawText(54, 80, "Over");
+      endGame();
     }
     return false;
   }
-  if (collideWithTank(bullet, tankPos) || collideWithTank(bullet, tankPos2) || collideWithTank(bullet, tankEnemy1) || collideWithTank(bullet, tankEnemy2))
+  if (Tank* collidedTank = tanks.CollidesWithTanks(bullet))
   {
+    collidedTank->Kill();
+    bullet.pos = collidedTank->GetPos();
+    bullet.state = EXPLOSION_FRAMES;
+    Graphics::DrawExplosion(bullet.pos.x, bullet.pos.y, bullet.state);
     return false;
   }
   return true;
@@ -360,17 +275,17 @@ void updateBullets()
     if (bullet.state == BULLET_STATE_FLYING)
     {
       // remove bullet at previous pos
-      Graphics::ClearBullet(bullet.x, bullet.y);
+      Graphics::ClearBullet(bullet.pos);
       if (updateBullet(bullet))
       {
-        Graphics::DrawBullet(bullet.x, bullet.y);
+        Graphics::DrawBullet(bullet.pos);
       }
     }
     else if (bullet.state != 0)
     {
       if (--bullet.state == 0)
       {
-        Graphics::ClearSprite(bullet.x, bullet.y);
+        Graphics::ClearSprite(bullet.pos);
       }
     }
   }
@@ -391,22 +306,21 @@ void drawLevel()
   }
 }
 
+void endGame()
+{
+  gameOver = true;
+  Graphics::DrawText(54, 72, "Game");
+  Graphics::DrawText(54, 80, "Over");
+}
+
 void setup() {
   // put your setup code here, to run once:
-  pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(JOYSTICK2_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(JOYSTICK_X_PIN, INPUT_ANALOG);
-  pinMode(JOYSTICK_Y_PIN, INPUT_ANALOG);
-  pinMode(JOYSTICK2_X_PIN, INPUT_ANALOG);
-  pinMode(JOYSTICK2_Y_PIN, INPUT_ANALOG);
+  Input::Setup();
   srand(analogRead(PB9));
   Graphics::InitScreen();
   drawLevel();
-  Graphics::DrawTank(tankPos.x, tankPos.y, tankPos.dir, tankPos.type);
-  Graphics::DrawTank(tankPos2.x, tankPos2.y, tankPos2.dir, tankPos2.type);
-  Graphics::DrawTank(tankEnemy1.x, tankEnemy1.y, tankEnemy1.dir, tankEnemy1.type);
-  Graphics::DrawTank(tankEnemy2.x, tankEnemy2.y, tankEnemy2.dir, tankEnemy2.type);
-  setupMeteo();
+  tanks.Respawn();
+  Meteo::Setup();
 
   Sound::Setup();
   Sound::PlayIntroMusic();
@@ -420,21 +334,26 @@ void loop() {
     if (timePassed >= lastStepTime + TANK_STEP_DURATION)
     {
       lastStepTime = timePassed;
-      updateTankPosPlayer(tankPos, JOYSTICK_X_PIN, JOYSTICK_Y_PIN);
-      updateTankFire(tankPos, JOYSTICK_BUTTON_PIN);
-      updateTankPosPlayer(tankPos2, JOYSTICK2_X_PIN, JOYSTICK2_Y_PIN);
-      updateTankFire(tankPos2, JOYSTICK2_BUTTON_PIN);
-      updateTankPosAI(tankEnemy1);
-      updateTankPosAI(tankEnemy2);
-      updateTankFire(tankEnemy1, 0);
-      updateTankFire(tankEnemy2, 0);
+      tanks.Respawn();
+      updateTankPosPlayer(tanks.GetPlayer1());
+      updateTankFire(tanks.GetPlayer1());
+      updateTankPosPlayer(tanks.GetPlayer2());
+      updateTankFire(tanks.GetPlayer2());
+      updateTankPosAI(tanks.GetEnemy1());
+      updateTankPosAI(tanks.GetEnemy2());
+      updateTankFire(tanks.GetEnemy1());
+      updateTankFire(tanks.GetEnemy2());
     }
     if (timePassed >= lastBulletsTime + BULLET_STEP_DURATION)
     {
       lastBulletsTime = timePassed;
       updateBullets();
     }
+    if (tanks.PlayersAreDead())
+    {
+      endGame();
+    }
   }
   Sound::Update();
-  updateMeteo();
+  Meteo::Update();
 }

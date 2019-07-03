@@ -1,5 +1,5 @@
-#include "Arduino.h"
 #include "Terrain.h"
+#include "Arduino.h"
 #include "Common.h"
 
 byte LEVEL1[] = {

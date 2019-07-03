@@ -10,6 +10,8 @@ enum TileType
   WATER = 5,
 };
 
+using byte = unsigned char;
+
 class Terrain
 {
   public:

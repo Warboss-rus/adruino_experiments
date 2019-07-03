@@ -1,11 +1,11 @@
 #include "Meteo.h"
 #include <OneWire.h>
-#include <Adafruit_BMP085_U.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include "Adafruit_BME280.h"
 
 OneWire ds(PA3);
-Adafruit_BMP085_Unified  bmp;
+Adafruit_BME280 bme;
 RF24 radio(PB11, PA4); // CE, CSN
 
 unsigned long lastTempUpdateTime = 0;
@@ -19,46 +19,47 @@ struct MeteoState
 };
 #define METEO_STATE_DATA_SIZE 12
 
-void setupMeteo()
+void Meteo::Setup()
 {
-  bmp.begin();
+  Serial.begin(115200);
+  if (!bme.begin(0x76)) {
+    Serial.println("Failed to init BME280, check wiring");
+  }
   radio.begin();
   radio.openWritingPipe(address);
   radio.setPALevel(RF24_PA_MIN);
   radio.stopListening();
-  Serial.begin(115200);
 }
 
-void updateMeteo()
+void Meteo::Update()
 {
-  byte data[2];
-  ds.reset();
-  ds.write(0xCC);
-  ds.write(0x44);
+  /*byte data[2];
+    ds.reset();
+    ds.write(0xCC);
+    ds.write(0x44);*/
 
   if (millis() - lastTempUpdateTime > 1000)
   {
     lastTempUpdateTime = millis();
-    ds.reset();
-    ds.write(0xCC);
-    ds.write(0xBE);
+    /*ds.reset();
+      ds.write(0xCC);
+      ds.write(0xBE);
 
-    data[0] = ds.read();
-    data[1] = ds.read();
+      data[0] = ds.read();
+      data[1] = ds.read();*/
 
     MeteoState state = {0.0f, 0.0f, 0};
-    state.temperature = ((data[1] << 8) | data[0]) * 0.0625;
-    float P = 0;
-    bmp.getPressure(&P);
-    state.pressure = (unsigned int)P;
+    //state.temperature = ((data[1] << 8) | data[0]) * 0.0625;
+    state.temperature = bme.readTemperature();
+    state.pressure = (unsigned int)bme.readPressure();
+    state.humidity = bme.readHumidity();
     radio.write(&state, METEO_STATE_DATA_SIZE);
     Serial.print("T=");
     Serial.print( state.temperature);
     Serial.print("C P=");
     Serial.print( state.pressure);
-    Serial.print("Pa (");
-    float mmHg = P * 0.0075006157584566;
-    Serial.print(mmHg);
-    Serial.println(" mmHg)");
+    Serial.print("Pa H=");
+    Serial.print(state.humidity);
+    Serial.println("%");
   }
 }

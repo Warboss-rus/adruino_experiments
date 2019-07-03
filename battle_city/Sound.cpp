@@ -1,7 +1,6 @@
 #include "Sound.h"
 #include <Arduino.h>
-
-static const uint8_t tonePin = PB9;
+#include "Pins.h"
 
 #define       NOTE_C_0(DURATION) ( (((uint16_t)DURATION)<<8) | 0b00000000)
 #define      NOTE_CS_0(DURATION) ( (((uint16_t)DURATION)<<8) | 0b00000001)
@@ -162,23 +161,23 @@ void Sound::PlayIntroMusic()
 
 void Sound::FireSound()
 {
-  if(!music.playing)
+  if (!music.playing)
   {
-    tone(tonePin, 3000, 200);
+    tone(SOUND_TONE_PIN, 3000, 200);
   }
 }
 
 void Sound::ExplosionSound()
 {
-  if(!music.playing)
+  if (!music.playing)
   {
-    tone(tonePin, 400, 400);
+    tone(SOUND_TONE_PIN, 400, 400);
   }
 }
 
 void Sound::Setup()
 {
-  pinMode(tonePin, OUTPUT);
+  pinMode(SOUND_TONE_PIN, OUTPUT);
 }
 
 void Sound::Update()
@@ -199,19 +198,19 @@ void Sound::Update()
       uint16_t data = pgm_read_word((uint16_t*)&music.data[x]);
       if ((data & 0xF) == 0xF)
       {
-        noTone(tonePin);
+        noTone(SOUND_TONE_PIN);
       }
       else
       {
         uint16_t Freq = Freq8[data & 0xF] / ( 1 << (8 - (data >> 4 & 0xF)));
-        tone(tonePin, Freq);
+        tone(SOUND_TONE_PIN, Freq);
       }
 
       int16_t duration = data >> 8;
       music.delay = duration;
       music.nextNote = x + 1;
     }
-    noTone(tonePin);
+    noTone(SOUND_TONE_PIN);
     music.playing = false;
   }
 }
