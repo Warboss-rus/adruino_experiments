@@ -186,8 +186,8 @@ void updateTankFire(Tank& tank)
       Bullet& bullet = bullets[i];
       if (!bullet.state)
       {
-        bullet.pos.x = tankPos.x + SPRITE_SIZE / 2;
-        bullet.pos.y = tankPos.y + SPRITE_SIZE / 2;
+        bullet.pos.x = tankPos.x + SPRITE_SIZE / 2 - BULLET_SIZE / 2;
+        bullet.pos.y = tankPos.y + SPRITE_SIZE / 2 - BULLET_SIZE / 2;
         switch (tank.GetDirection())
         {
           case DIR_UP:
@@ -264,7 +264,45 @@ bool updateBullet(Bullet& bullet)
     Graphics::DrawExplosion(bullet.pos.x, bullet.pos.y, bullet.state);
     return false;
   }
+  for (size_t i = 0; i < MAX_BULLETS; ++i)
+  {
+    Bullet& otherBullet = bullets[i];
+    if ((otherBullet.state == BULLET_STATE_FLYING) && (otherBullet.owner != bullet.owner) &&
+        (bullet.pos.x + BULLET_SIZE >= otherBullet.pos.x) && (bullet.pos.x <= otherBullet.pos.x + BULLET_SIZE) && (bullet.pos.y + BULLET_SIZE >= otherBullet.pos.y) && (bullet.pos.y <= otherBullet.pos.y + BULLET_SIZE))
+    {
+      bullet.state = 0;
+      otherBullet.state = 0;
+      Graphics::ClearBullet(bullet.pos);
+      Graphics::ClearBullet(otherBullet.pos);
+      return false;
+    }
+  }
   return true;
+}
+
+void clearBullet(Point pos)
+{
+  TileType tile1 = Terrain::GetTile(pos.x / SPRITE_SIZE, pos.y / SPRITE_SIZE);
+  TileType tile2 = Terrain::GetTile(pos.x / SPRITE_SIZE, (pos.y + BULLET_SIZE - 1) / SPRITE_SIZE);
+  TileType tile3 = Terrain::GetTile((pos.x + BULLET_SIZE - 1) / SPRITE_SIZE, pos.y / SPRITE_SIZE);
+  TileType tile4 = Terrain::GetTile((pos.x + BULLET_SIZE - 1) / SPRITE_SIZE, (pos.y + BULLET_SIZE - 1) / SPRITE_SIZE);
+  if (tile1 == NONE && tile2 == NONE && tile3 == NONE && tile4 == NONE)
+  {
+    return Graphics::ClearBullet(pos);
+  }
+  drawTerrain(tile1, pos.x / SPRITE_SIZE * SPRITE_SIZE, pos.y / SPRITE_SIZE * SPRITE_SIZE);
+  if (((pos.y + BULLET_SIZE - 1) / SPRITE_SIZE * SPRITE_SIZE) != (pos.y / SPRITE_SIZE * SPRITE_SIZE))
+  {
+    drawTerrain(tile2, pos.x / SPRITE_SIZE * SPRITE_SIZE, (pos.y + BULLET_SIZE - 1) / SPRITE_SIZE * SPRITE_SIZE);
+  }
+  if (((pos.x + BULLET_SIZE - 1) / SPRITE_SIZE * SPRITE_SIZE) != (tile1, pos.x / SPRITE_SIZE * SPRITE_SIZE))
+  {
+    drawTerrain(tile3, (pos.x + BULLET_SIZE - 1) / SPRITE_SIZE * SPRITE_SIZE, pos.y / SPRITE_SIZE * SPRITE_SIZE);
+  }
+  if ((((pos.y + BULLET_SIZE - 1) / SPRITE_SIZE * SPRITE_SIZE) != (pos.y / SPRITE_SIZE * SPRITE_SIZE)) || (((pos.x + BULLET_SIZE - 1) / SPRITE_SIZE * SPRITE_SIZE) != (tile1, pos.x / SPRITE_SIZE * SPRITE_SIZE)))
+  {
+    drawTerrain(tile4, (pos.x + BULLET_SIZE - 1) / SPRITE_SIZE * SPRITE_SIZE, (pos.y + BULLET_SIZE - 1) / SPRITE_SIZE * SPRITE_SIZE);
+  }
 }
 
 void updateBullets()
@@ -275,7 +313,7 @@ void updateBullets()
     if (bullet.state == BULLET_STATE_FLYING)
     {
       // remove bullet at previous pos
-      Graphics::ClearBullet(bullet.pos);
+      clearBullet(bullet.pos);
       if (updateBullet(bullet))
       {
         Graphics::DrawBullet(bullet.pos);

@@ -206,12 +206,12 @@ void Graphics::ClearMovingSprite(Point oldPos, Point newPos)
 
 void Graphics::DrawBullet(Point pos)
 {
-  Display::FillRect(pos.x - BULLET_SIZE / 2, pos.y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE, BULLET_COLOR);
+  Display::FillRect(pos.x, pos.y, BULLET_SIZE, BULLET_SIZE, BULLET_COLOR);
 }
 
 void Graphics::ClearBullet(Point pos)
 {
-  Display::FillRect(pos.x - BULLET_SIZE / 2, pos.y - BULLET_SIZE / 2, BULLET_SIZE, BULLET_SIZE, COLOR_BLACK);
+  Display::FillRect(pos.x, pos.y, BULLET_SIZE, BULLET_SIZE, COLOR_BLACK);
 }
 
 void Graphics::DrawBricks(byte x, byte y)

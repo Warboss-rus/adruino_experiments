@@ -83,5 +83,5 @@ bool TankManager::CollidesWithTanks(const Tank& tank) const
 
 Tank* TankManager::CollidesWithTanks(const Bullet& bullet)
 {
-  return CollidesWithTanks(bullet.pos, SPRITE_SIZE, SPRITE_SIZE, bullet.owner);
+  return CollidesWithTanks(bullet.pos, BULLET_SIZE, BULLET_SIZE, bullet.owner);
 }
