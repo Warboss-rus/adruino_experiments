@@ -1,6 +1,12 @@
+#ifdef ESP32
+#include <WiFi.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#else
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#endif
 #include <WebSocketsServer.h>
 #include "MeteoStorage.h"
 #include "HTMLProvider.h"
@@ -12,25 +18,37 @@
 #define WEBSOCKET_PORT 9000
 #define METEO_STATE_DATA_SIZE 12
 
+#ifdef ESP32
+WebServer server(SERVER_PORT);
+#else
 ESP8266WebServer server(SERVER_PORT);
+#endif
 WebSocketsServer webSocket(WEBSOCKET_PORT);
 MeteoStorage storage;
 NTPTime ntp;
 
-void readDataFromSerial()
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(5, 4); // CE, CSN
+const byte address[6] = "12345";
+
+void readDataFromWireless()
 {
-  while (Serial.available() >= METEO_STATE_DATA_SIZE)
+  while (radio.available())
   {
     MeteoState currentState = {};
-    byte* data = (byte*)&currentState;
-    for (unsigned int i = 0; i < METEO_STATE_DATA_SIZE; ++i)
-    {
-      data[i] = Serial.read();
-    }
+    radio.read(&currentState, METEO_STATE_DATA_SIZE);
     currentState.timestamp = ntp.getTimeStamp();
     storage.PushNewState(currentState);
     String stateText = stateToJSON(currentState);
     webSocket.broadcastTXT(stateText);
+    Serial.print("T=");
+    Serial.print( currentState.temperature);
+    Serial.print("C P=");
+    Serial.print( currentState.pressure);
+    Serial.print("Pa H=");
+    Serial.print(currentState.humidity);
+    Serial.println("%");
   }
 }
 
@@ -83,6 +101,7 @@ void setup()
   if (!MDNS.begin("esp8266")) {
     Serial.println("MDNS responder failed");
   }
+  MDNS.addService("http", "tcp", 80);
 
   setupOTA();
 
@@ -95,16 +114,21 @@ void setup()
 
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
+
+  radio.begin();
+  radio.openReadingPipe(0, address);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.startListening();
 }
 
 void loop()
 {
-  readDataFromSerial();
+  readDataFromWireless();
 
   server.handleClient();
   webSocket.loop();
-
+#ifndef ESP32
   MDNS.update();
-
+#endif
   loopOTA();
 }
