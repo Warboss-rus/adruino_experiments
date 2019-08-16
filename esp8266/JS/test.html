@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+	<link rel="icon" href="data:,">
+	<script src="script.js"></script>
+	<body>
+		Display scale: <select id='historyScale' onchange='changeScale(this)'>
+			<option value="" disabled hidden>Custom</option>
+			<option value='-1' selected>Everything</option>
+			<option value='3600000'>Last Hour</option>
+			<option value='86400000'>Last Day</option>
+			<option value='2592000000'>Last Month</option>
+			<option value='31536000000'>Last Year</option>
+		</select>
+		<br>
+		<canvas id="historyGraph" width="1000px" height="400px" style="border: 1px solid #000000;" hidden></canvas>
+		<script>
+			var testNowTime = Math.floor(new Date() / 1000);
+			var testDuration = 60;
+			meteoHistory = [
+				{temp: 23, pres:90000, hum: 40, timestamp: testNowTime - 50},
+				{temp: 25, pres:100000, hum: 30, timestamp: testNowTime - 30},
+				{temp: 30, pres:110000, hum: 50, timestamp: testNowTime - 20},
+				{temp: 20, pres:80000, hum: 25, timestamp: testNowTime},
+			];
+			displaySettings.end = new Date(testNowTime * 1000);
+			drawGraph();
+		</script>
+	</body>
+</html>
