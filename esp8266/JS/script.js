@@ -15,7 +15,7 @@ var displaySettings = {
 
 function drawGraph() {
     var end = displaySettings.end ? displaySettings.end : new Date();
-    var start = displaySettings.size ? new Date(end - displaySettings.size) : (meteoHistory.length > 0 ? new Date(meteoHistory[0].timestamp * 1000) : new Date());
+    var start = displaySettings.size ? new Date(end - displaySettings.size) : (meteoHistory.length > 0 ? new Date(meteoHistory[0].time * 1000) : new Date());
     var canvas = document.getElementById('historyGraph');
     canvas.hidden = false;
     var ctx = canvas.getContext('2d');
@@ -53,7 +53,7 @@ function drawGraphLine(canvas, ctx, valueName, min, max, start, end)
 {
     ctx.beginPath();
     for (var i = 0; i < meteoHistory.length; i++) {
-        var x = (new Date(meteoHistory[i].timestamp * 1000) - start) * canvas.width / (end - start);
+        var x = (new Date(meteoHistory[i].time * 1000) - start) * canvas.width / (end - start);
         var y = canvas.height - (meteoHistory[i][valueName] - min) * canvas.height / (max - min);
         if (i === 0)
         {
@@ -72,7 +72,7 @@ function drawTooltip(canvas, ctx, start, end) {
     var distance = 10000000
     for (var i = 0; i < meteoHistory.length; i++)
     {
-        var x = (new Date(meteoHistory[i].timestamp * 1000) - start) * canvas.width / (end - start);
+        var x = (new Date(meteoHistory[i].time * 1000) - start) * canvas.width / (end - start);
         if (Math.abs(displaySettings.mousePosX - x) < distance)
         {
             historyItem = meteoHistory[i];
@@ -81,7 +81,7 @@ function drawTooltip(canvas, ctx, start, end) {
     }
     var lineHeight=ctx.measureText('M').width * 1.5;
     var margin = ctx.measureText('M').width;
-    var timestampText = new Date(historyItem.timestamp * 1000).toLocaleString();
+    var timestampText = new Date(historyItem.time * 1000).toLocaleString();
     var tempText = 'T: ' + historyItem.temp + '\\xB0C';
     var pressureText = 'P: ' + historyItem.pres + ' Pa (' + Math.round(historyItem.pres / 133.3224 * 100) / 100 + ' mmHg)';
     var humText = 'H: ' + historyItem.hum + '%';
@@ -130,7 +130,7 @@ function onMouseWheel(e) {
     size = displaySettings.size;
     if (!size)
     {
-        size = meteoHistory.length > 0 ? (meteoHistory[meteoHistory.length - 1].timestamp - meteoHistory[0].timestamp) * 1000 : null;
+        size = meteoHistory.length > 0 ? (meteoHistory[meteoHistory.length - 1].time - meteoHistory[0].time) * 1000 : null;
     }
     if (size)
     {

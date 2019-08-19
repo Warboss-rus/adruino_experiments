@@ -29,7 +29,11 @@ NTPTime ntp;
 
 #include <nRF24L01.h>
 #include <RF24.h>
+#ifdef ESP32
+RF24 radio(17, 5); // CE, CSN
+#else
 RF24 radio(5, 4); // CE, CSN
+#endif
 const byte address[6] = "12345";
 
 void readDataFromWireless()
