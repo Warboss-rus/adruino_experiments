@@ -49,7 +49,6 @@ void NTPTime::init()
 
     sendNTPpacket(udp, timeServerIP, packetBuffer); // send an NTP packet to a time server
     // wait to see if a reply is available
-    Serial.println("syncing time...");
     delay(1000);
 
     int cb = udp.parsePacket();

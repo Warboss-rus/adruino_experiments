@@ -1,4 +1,5 @@
-#define HISTORY_SIZE 100
+#include "ring_buffer.h"
+#define HISTORY_SIZE 4500
 
 struct MeteoState
 {
@@ -11,34 +12,25 @@ struct MeteoState
 class MeteoStorage
 {
   public:
-    MeteoState GetCurrentState() const
+    const MeteoState& GetCurrentState() const
     {
-      return m_currentState;
+      return m_data.back();
     }
 
-    void PushNewState(const MeteoState& state)
+    void PushNewState(MeteoState&& state)
     {
-      m_history[m_historyEnd] = state;
-      m_historyEnd = (m_historyEnd + 1) % HISTORY_SIZE;
-      if (m_historyStart == m_historyEnd)
-      {
-        m_historyStart = (m_historyStart + 1) % HISTORY_SIZE;
-      }
-      m_currentState = state;
+      m_data.push_back((MeteoState&&)state);
     }
 
     size_t size() const
     {
-      return (m_historyEnd - m_historyStart + HISTORY_SIZE) % HISTORY_SIZE;
+      return m_data.size();
     }
 
     const MeteoState& operator[](size_t idx) const
     {
-      return m_history[(m_historyStart + idx) % HISTORY_SIZE];
+      return m_data[idx];
     }
   private:
-    MeteoState m_currentState = {0.0f, 0, 0.0f};
-    MeteoState m_history[HISTORY_SIZE] = {};
-    unsigned int m_historyStart = 0;
-    unsigned int m_historyEnd = 0;
+    ring_buffer<MeteoState, HISTORY_SIZE> m_data;
 };

@@ -13,6 +13,7 @@
 #include "WiFiCredentials.h"
 #include "OTA.h"
 #include "NTP.h"
+#include "Display.h"
 
 #define SERVER_PORT 80
 #define WEBSOCKET_PORT 9000
@@ -43,7 +44,7 @@ void readDataFromWireless()
     MeteoState currentState = {};
     radio.read(&currentState, METEO_STATE_DATA_SIZE);
     currentState.timestamp = ntp.getTimeStamp();
-    storage.PushNewState(currentState);
+    storage.PushNewState(MeteoState(currentState));
     String stateText = stateToJSON(currentState);
     webSocket.broadcastTXT(stateText);
     Serial.print("T=");
@@ -89,7 +90,9 @@ void setup()
   Serial.begin(115200);
   WiFi.begin(ssid, password);
 
+  Display::init();
   Serial.print("Connecting");
+  Display::setString(0, "Connecting");
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
@@ -97,10 +100,13 @@ void setup()
   }
   Serial.println();
 
-  ntp.init();
-
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
+  Display::setString(3, "IP:" + WiFi.localIP().toString());
+  Serial.println("syncing time...");
+  Display::setString(0, "synching time...");
+
+  ntp.init();
 
   if (!MDNS.begin("esp8266")) {
     Serial.println("MDNS responder failed");
@@ -123,6 +129,8 @@ void setup()
   radio.openReadingPipe(0, address);
   radio.setPALevel(RF24_PA_MIN);
   radio.startListening();
+
+  Display::setString(0, "device ready");
 }
 
 void loop()
