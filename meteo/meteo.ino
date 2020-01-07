@@ -2,34 +2,30 @@
 // To enable pressure sensor define BMP180_ADAFRUIT or BMP180_SODAQ
 
 #define SI7021_SPARKFUN
-#define BMP180_SODAQ
 
 #ifdef SI7021_ADAFRUIT
 #include <Adafruit_Sensor.h>
 #include <Adafruit_Si7021.h>
+Adafruit_Si7021 sensor;
 #elif defined(SI7021_SPARKFUN)
 #include "SparkFun_Si7021_Breakout_Library.h"
+Weather sensor;
 #endif
 #ifdef BMP180_ADAFRUIT
 #include <Adafruit_BMP085_U.h>
+Adafruit_BMP085_Unified  bmp;
 #elif defined(BMP180_SODAQ)
 #include <Sodaq_BMP085.h>
+Sodaq_BMP085 bmp;
+#elif defined(BMP280_ADAFRUIT)
+#include <Adafruit_BMP280.h>
+Adafruit_BMP280 bmp;
 #endif
 #include <OneWire.h>
 #include <RF24.h>
 
-OneWire ds(A0);
-#ifdef BMP180_ADAFRUIT
-Adafruit_BMP085_Unified  bmp;
-#elif defined(BMP180_SODAQ)
-Sodaq_BMP085 bmp;
-#endif
-#ifdef SI7021_ADAFRUIT
-Adafruit_Si7021 sensor;
-#else if defined(SI7021_SPARKFUN)
-Weather sensor;
-#endif
-RF24           radio(9, 10);
+OneWire ds(PB0);
+RF24           radio(PB1, PB2);//CE, CS
 const byte address[6] = "12345";
 
 struct MeteoState
@@ -60,7 +56,7 @@ float readTempDallas()
 
 void setup() {
   // put your setup code here, to run once:
-#if defined(BMP180_ADAFRUIT) || defined(BMP180_SODAQ)
+#if defined(BMP180_ADAFRUIT) || defined(BMP180_SODAQ) || defined(BMP280_ADAFRUIT)
   bmp.begin();
 #endif
 #if defined(SI7021_ADAFRUIT) || defined(SI7021_SPARKFUN)
@@ -70,9 +66,11 @@ void setup() {
   radio.setPALevel(RF24_PA_HIGH);
   radio.openWritingPipe(address);
   radio.stopListening();
+  Serial.begin(9600);
 }
 
 void loop() {
+  Serial.print("Hello, World!");
   // put your main code here, to run repeatedly:
   delay(1000); // let the sensor pick up data
   MeteoState state = {};
@@ -86,7 +84,7 @@ void loop() {
   float P = 0;
   bmp.getPressure(&P);
   state.pressure = P;
-#elif defined(BMP180_SODAQ)
+#elif defined(BMP180_SODAQ) || defined(BMP280_ADAFRUIT)
   state.pressure = bmp.readPressure();
 #endif
   radio.write(&state, METEO_STATE_DATA_SIZE);

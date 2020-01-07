@@ -7,6 +7,7 @@
 #define JOYSTICK_Y_PIN A1
 #define JOYSTICK_DEADZONE_MIN 256
 #define JOYSTICK_DEADZONE_MAX 768
+#define JOYSTICK_NEUTRAL 512
 //#define ENABLE_SERIAL_DISPLAY
 #define ENABLE_PHYSICAL_DISPLAY
 
@@ -76,9 +77,8 @@ void updateDirection()
 {
   const int x = analogRead(JOYSTICK_X_PIN);
   const int y = analogRead(JOYSTICK_Y_PIN);
-  const int joystickNeutral = (JOYSTICK_DEADZONE_MIN + JOYSTICK_DEADZONE_MAX) / 2;
-  const int deltaX = abs(x - joystickNeutral);
-  const int deltaY = abs(y - joystickNeutral);
+  const int deltaX = abs(x - JOYSTICK_NEUTRAL);
+  const int deltaY = abs(y - JOYSTICK_NEUTRAL);
   if (deltaX > deltaY)
   {
     if ((x <= JOYSTICK_DEADZONE_MIN) && (prevSnakeDirection != RIGHT))
