@@ -5,6 +5,8 @@
 #define JOYSTICK_DEADZONE_MAX 3072
 #define JOYSTICK_NEUTRAL 2048
 
+using namespace tank;
+
 Direction getCurrentDirection(uint32_t xPin, uint32_t yPin)
 {
   const int x = analogRead(xPin);
@@ -40,10 +42,10 @@ void Input::Setup()
 {
   pinMode(JOYSTICK_BUTTON_PIN, INPUT_PULLUP);
   pinMode(JOYSTICK2_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(JOYSTICK_X_PIN, INPUT_ANALOG);
-  pinMode(JOYSTICK_Y_PIN, INPUT_ANALOG);
-  pinMode(JOYSTICK2_X_PIN, INPUT_ANALOG);
-  pinMode(JOYSTICK2_Y_PIN, INPUT_ANALOG);
+  //pinMode(JOYSTICK_X_PIN, INPUT_ANALOG);
+  //pinMode(JOYSTICK_Y_PIN, INPUT_ANALOG);
+  //pinMode(JOYSTICK2_X_PIN, INPUT_ANALOG);
+  //pinMode(JOYSTICK2_Y_PIN, INPUT_ANALOG);
 }
 
 Direction Input::GetPlayerDirection(TankIndex player)

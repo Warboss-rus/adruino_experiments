@@ -1,8 +1,11 @@
-#include "Terrain.h"
+#include "TankCommon.h"
+#include "TankLevel.h"
 #include "Arduino.h"
-#include "Common.h"
 
-byte LEVEL1[] = {
+namespace
+{
+
+const byte LEVEL1[] PROGMEM = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   1, 0, 1, 0, 1, 0, 4, 5, 4, 0, 1, 0, 1, 0, 1, 0,
   1, 0, 1, 0, 1, 0, 5, 5, 5, 0, 1, 0, 1, 0, 1, 0,
@@ -25,12 +28,24 @@ byte LEVEL1[] = {
   0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0,
 };
 
-TileType Terrain::GetTile(byte x, byte y)
-{
-  return (TileType)LEVEL1[x + y * TILE_ROWS];
 }
 
-void Terrain::ClearTile(byte x, byte y)
+namespace tank
 {
-  LEVEL1[x + y * TILE_ROWS] = NONE;
+
+void Level::LoadLevel(int number)
+{
+  memcpy_P(m_level, LEVEL1, TILES_COUNT);
+}
+
+TileType Level::GetTile(ushort x, ushort y) const
+{
+  return (TileType)m_level[x + y * TILE_ROWS];
+}
+
+void Level::ClearTile(ushort x, ushort y)
+{
+  m_level[x + y * TILE_ROWS] = NONE;
+}
+
 }

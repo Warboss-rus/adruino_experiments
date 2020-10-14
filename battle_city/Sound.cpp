@@ -1,6 +1,7 @@
 #include "Sound.h"
 #include <Arduino.h>
 #include "Pins.h"
+#include <Tone32.h>
 
 #define       NOTE_C_0(DURATION) ( (((uint16_t)DURATION)<<8) | 0b00000000)
 #define      NOTE_CS_0(DURATION) ( (((uint16_t)DURATION)<<8) | 0b00000001)

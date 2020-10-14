@@ -1,13 +1,16 @@
 #include <Arduino.h>
-#include "Tank.h"
-#include "Graphics.h"
+#include "TankManager.h"
+#include "TankGraphics.h"
+
+namespace tank
+{
 
 namespace
 {
-constexpr Tank PLAYER1_DEFAULT = Tank(40, 152, DIR_UP, TANK_P1);
-constexpr Tank PLAYER2_DEFAULT = Tank(72, 152, DIR_UP, TANK_P2);
+constexpr Tank PLAYER1_DEFAULT = Tank(SCREEN_WIDTH/2-SPRITE_SIZE*3, SCREEN_HEIGHT-SPRITE_SIZE, DIR_UP, TANK_P1);
+constexpr Tank PLAYER2_DEFAULT = Tank(SCREEN_WIDTH/2+SPRITE_SIZE, SCREEN_HEIGHT-SPRITE_SIZE, DIR_UP, TANK_P2);
 constexpr Tank ENEMY1_DEFAULT = Tank(0, 0, DIR_RIGHT, TANK_ENEMY);
-constexpr Tank ENEMY2_DEFAULT = Tank(120, 0, DIR_DOWN, TANK_ENEMY);
+constexpr Tank ENEMY2_DEFAULT = Tank(SCREEN_WIDTH-SPRITE_SIZE, 0, DIR_DOWN, TANK_ENEMY);
 
 bool CollidesWithTank(Point pos, byte width, byte height, const Tank& tank, TankIndex type)
 {
@@ -84,4 +87,6 @@ bool TankManager::CollidesWithTanks(const Tank& tank) const
 Tank* TankManager::CollidesWithTanks(const Bullet& bullet)
 {
   return CollidesWithTanks(bullet.pos, BULLET_SIZE, BULLET_SIZE, bullet.owner);
+}
+
 }

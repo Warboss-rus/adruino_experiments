@@ -1,9 +1,12 @@
-#include "Common.h"
+#include "TankCommon.h"
+
+namespace tank
+{
 
 class Tank
 {
   public:
-    constexpr Tank(byte x = 0, byte y = 0, Direction dir = DIR_UP, TankIndex type = TANK_P1, bool alive = false)
+    constexpr Tank(ushort x = 0, ushort y = 0, Direction dir = DIR_UP, TankIndex type = TANK_P1, bool alive = false)
       : m_pos(Point{x, y}), m_dir(dir), m_type(type), m_alive(alive)
     {}
     Tank(const Tank& other) = default;
@@ -128,3 +131,5 @@ class TankManager
     byte m_player2Lives = PLAYER_LIVES;
     byte m_enemyLives = ENEMY_LIVES;
 };
+
+}

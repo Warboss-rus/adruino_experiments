@@ -1,9 +1,9 @@
-#include "Common.h"
+#include "TankCommon.h"
 
 class Input
 {
   public:
     static void Setup();
-    static Direction GetPlayerDirection(TankIndex player);
-    static bool GetFireButtonPressed(TankIndex player);
+    static tank::Direction GetPlayerDirection(tank::TankIndex player);
+    static bool GetFireButtonPressed(tank::TankIndex player);
 };
